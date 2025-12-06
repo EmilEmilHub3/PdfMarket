@@ -18,11 +18,21 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var result = await authService.RegisterAsync(request);
-        return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
+        try
+        {
+            var result = await authService.RegisterAsync(request);
+            return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "User already exists")
+        {
+            // 409 Conflict når brugeren allerede findes
+            return Conflict(new { message = ex.Message });
+        }
     }
+
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)

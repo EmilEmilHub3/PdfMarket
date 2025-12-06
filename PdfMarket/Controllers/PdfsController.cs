@@ -43,7 +43,9 @@ public class PdfsController : ControllerBase
         if (file is null || file.Length == 0)
             return BadRequest("Missing PDF file.");
 
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "dummy-user";
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
         await using var stream = file.OpenReadStream();
         var result = await pdfService.UploadAsync(userId, request, stream, file.FileName);
@@ -55,7 +57,9 @@ public class PdfsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Update(string id, [FromBody] UpdatePdfRequest request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "dummy-user";
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
         var updated = await pdfService.UpdateAsync(userId, id, request);
         if (updated is null)
@@ -68,7 +72,9 @@ public class PdfsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Deactivate(string id)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "dummy-user";
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
         var success = await pdfService.DeactivateAsync(userId, id);
         if (!success)

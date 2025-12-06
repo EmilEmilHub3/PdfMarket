@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PdfMarket.Contracts.Purchases;
 using PdfMarket.Application.Services;
-using System.Security.Claims;
+using PdfMarket.Contracts.Purchases;
 
 namespace PdfMarket.Controllers;
 
@@ -21,12 +21,20 @@ public class PurchasesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Purchase([FromBody] PurchaseRequest request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "dummy-user";
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
-        var result = await purchaseService.PurchaseAsync(userId, request);
-        if (result is null)
-            return BadRequest();
-
-        return CreatedAtAction(nameof(Purchase), new { id = result.PurchaseId }, result);
+        try
+        {
+            var result = await purchaseService.PurchaseAsync(userId, request);
+            // hvis købet lykkes
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "Not enough points")
+        {
+            // pæn fejl i stedet for 500
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
