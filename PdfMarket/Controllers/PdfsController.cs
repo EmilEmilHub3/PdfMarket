@@ -82,4 +82,20 @@ public class PdfsController : ControllerBase
 
         return NoContent();
     }
+
+    // NEW: Download endpoint
+    [HttpGet("{id}/download")]
+    [Authorize]
+    public async Task<IActionResult> Download(string id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var fileResult = await pdfService.GetFileForDownloadAsync(userId, id);
+        if (fileResult is null)
+            return NotFound();
+
+        return File(fileResult.Stream, fileResult.ContentType, fileResult.FileName);
+    }
 }

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿// src/Controllers/PurchasesController.cs
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PdfMarket.Application.Services;
@@ -28,7 +29,9 @@ public class PurchasesController : ControllerBase
         try
         {
             var result = await purchaseService.PurchaseAsync(userId, request);
-            // hvis købet lykkes
+            if (result is null)
+                return NotFound(); // e.g. pdf or user not found
+
             return Ok(result);
         }
         catch (InvalidOperationException ex) when (ex.Message == "Not enough points")
@@ -36,5 +39,17 @@ public class PurchasesController : ControllerBase
             // pæn fejl i stedet for 500
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    // NEW: GET /api/purchases/my
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMyPurchases()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var result = await purchaseService.GetMyPurchasesAsync(userId);
+        return Ok(result);
     }
 }

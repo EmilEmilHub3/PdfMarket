@@ -28,7 +28,7 @@ public class AuthService : IAuthService
             Email = request.Email,
             PasswordHash = request.Password, // TODO hash this later
             Role = "User",
-            PointsBalance = 0
+            PointsBalance = 100000
         };
 
         await userRepository.AddAsync(user);

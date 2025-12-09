@@ -1,4 +1,5 @@
-﻿using PdfMarket.Contracts.Pdfs;
+﻿using System.IO;
+using PdfMarket.Contracts.Pdfs;
 using PdfMarket.Application.Abstractions.Repositories;
 using PdfMarket.Application.Abstractions.Storage;
 using PdfMarket.Domain.Entities;
@@ -122,5 +123,42 @@ public class PdfService : IPdfService
         pdf.IsActive = false;
         await pdfRepository.UpdateAsync(pdf);
         return true;
+    }
+
+    /// <summary>
+    /// Henter PDF-filen klar til download.
+    /// (Lige nu tjekker vi kun at den er aktiv og har en fil; senere kan du koble køb-check på.)
+    /// </summary>
+    public async Task<PdfFileResult?> GetFileForDownloadAsync(string userId, string pdfId)
+    {
+        var pdf = await pdfRepository.GetByIdAsync(pdfId);
+        if (pdf is null)
+            return null;
+
+        if (!pdf.IsActive)
+            return null;
+
+        if (string.IsNullOrEmpty(pdf.FileStorageId))
+            return null;
+
+        // TODO: Her kan du senere tilføje:
+        // - Har brugeren købt pdf'en?
+        // - Eller er user uploader/admin?
+
+        var memoryStream = new MemoryStream();
+        await fileStorage.DownloadAsync(pdf.FileStorageId, memoryStream);
+        memoryStream.Position = 0;
+
+        var safeTitle = string.IsNullOrWhiteSpace(pdf.Title)
+            ? "document"
+            : pdf.Title;
+
+        var fileName = $"{safeTitle}.pdf";
+
+        return new PdfFileResult(
+            memoryStream,
+            fileName,
+            "application/pdf"
+        );
     }
 }

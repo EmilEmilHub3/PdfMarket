@@ -12,8 +12,26 @@ using PdfMarket.Infrastructure.Mongo;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- CORS for React frontend ---
+var frontendOrigin = "http://localhost:5173";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(frontendOrigin)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
+
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -103,9 +121,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Order matters:
-// 1. Authentication (JWT)
-// 2. Authorization (roles)
+// --- Enable CORS BEFORE auth ---
+app.UseCors("Frontend");
+
+// Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
