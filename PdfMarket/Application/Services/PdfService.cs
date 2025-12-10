@@ -68,12 +68,19 @@ public class PdfService : IPdfService
         );
     }
 
-    public async Task<PdfDetailsDto> UploadAsync(string userId, UploadPdfRequest request, Stream pdfStream, string fileName)
+    public async Task<UploadPdfResponse> UploadAsync(
+      string userId,
+      UploadPdfRequest request,
+      Stream pdfStream,
+      string fileName)
     {
-        // 1) Upload selve filen til GridFS via FileStorage
-        var storageId = await fileStorage.UploadAsync(pdfStream, fileName, "application/pdf");
+        // 1) Upload selve filen til storage via abstraction
+        var storageId = await fileStorage.UploadAsync(
+            pdfStream,
+            fileName,
+            "application/pdf");
 
-        // 2) Gem metadata i pdfs-collection
+        // 2) Gem metadata via IPdfRepository
         var pdf = new PdfDocument
         {
             Title = request.Title,
@@ -86,15 +93,22 @@ public class PdfService : IPdfService
 
         await pdfRepository.AddAsync(pdf);
 
-        // 3) Giv upload-point til brugeren
+        // 3) Giv upload-point til brugeren via IUserRepository
         var user = await userRepository.GetByIdAsync(userId)
                    ?? throw new InvalidOperationException("Uploader not found");
 
         user.PointsBalance += 1; // 1 point per upload
         await userRepository.UpdateAsync(user);
 
-        var details = await GetDetailsAsync(pdf.Id);
-        return details ?? throw new InvalidOperationException("Failed to load uploaded PDF");
+        // 4) Hent detaljer om PDF (samme mapping som du allerede bruger)
+        var details = await GetDetailsAsync(pdf.Id)
+                      ?? throw new InvalidOperationException("Failed to load uploaded PDF");
+
+        // 5) Returnér både pdf + ny pointsBalance
+        return new UploadPdfResponse(
+            Pdf: details,
+            UploaderPointsBalance: user.PointsBalance
+        );
     }
 
     public async Task<PdfDetailsDto?> UpdateAsync(string userId, string pdfId, UpdatePdfRequest request)

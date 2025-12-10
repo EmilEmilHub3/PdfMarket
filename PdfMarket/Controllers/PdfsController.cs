@@ -48,10 +48,18 @@ public class PdfsController : ControllerBase
             return Unauthorized();
 
         await using var stream = file.OpenReadStream();
+
+        // result er nu UploadPdfResponse (Pdf + UploaderPointsBalance)
         var result = await pdfService.UploadAsync(userId, request, stream, file.FileName);
 
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        // 201 Created + Location-header der peger på GET /api/pdfs/{id}
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Pdf.Id },
+            result // sender hele UploadPdfResponse til frontend
+        );
     }
+
 
     [HttpPut("{id}")]
     [Authorize]
