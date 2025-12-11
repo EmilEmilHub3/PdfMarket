@@ -1,9 +1,6 @@
-﻿// src/Contracts/Purchases/PurchaseContracts.cs
-namespace PdfMarket.Contracts.Purchases;
+﻿namespace PdfMarket.Contracts.Purchases;
 
-public record PurchaseRequest(
-    string PdfId
-);
+public record PurchaseRequest(string PdfId);
 
 public record PurchaseResponse(
     string PurchaseId,
@@ -14,7 +11,6 @@ public record PurchaseResponse(
     int BuyerPointsBalance
 );
 
-// NEW: used for "My purchases" / downloads list
 public record PurchasedPdfDto(
     string PdfId,
     string Title,

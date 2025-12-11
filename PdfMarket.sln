@@ -5,6 +5,10 @@ VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket", "PdfMarket\PdfMarket.csproj", "{828B8133-F88D-403D-98EB-52DF7ED0E952}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket.AdminClient", "PdfMarket.AdminClient\PdfMarket.AdminClient.csproj", "{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket.Contracts", "PdfMarket.Contracts\PdfMarket.Contracts.csproj", "{2389E202-1A8B-4572-86C3-ADFC3FC6C59D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{828B8133-F88D-403D-98EB-52DF7ED0E952}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{828B8133-F88D-403D-98EB-52DF7ED0E952}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{828B8133-F88D-403D-98EB-52DF7ED0E952}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2389E202-1A8B-4572-86C3-ADFC3FC6C59D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2389E202-1A8B-4572-86C3-ADFC3FC6C59D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2389E202-1A8B-4572-86C3-ADFC3FC6C59D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2389E202-1A8B-4572-86C3-ADFC3FC6C59D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
