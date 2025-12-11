@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using PdfMarket.Application.Abstractions.Repositories;
 using PdfMarket.Application.Abstractions.Security;
@@ -12,7 +13,9 @@ using PdfMarket.Infrastructure.Mongo;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- CORS for React frontend ---
+// --------------------
+// CORS (React frontend)
+// --------------------
 var frontendOrigin = "http://localhost:5173";
 
 builder.Services.AddCors(options =>
@@ -25,20 +28,58 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Controllers
+// --------------------
+// Controllers + JSON
+// --------------------
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
-        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.PropertyNamingPolicy =
+            System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-
-// Swagger
+// --------------------
+// Swagger + JWT support
+// --------------------
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PdfMarket",
+        Version = "v1"
+    });
 
-// --- MongoDB configuration ---
+    // ?? JWT Bearer authentication for Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter: Bearer {your JWT token}"
+    });
 
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// --------------------
+// MongoDB configuration
+// --------------------
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 
@@ -55,12 +96,14 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
     return client.GetDatabase(settings.DatabaseName);
 });
 
-// --- File storage (GridFS) ---
-
+// --------------------
+// File storage (GridFS)
+// --------------------
 builder.Services.AddSingleton<IFileStorage, GridFsFileStorage>();
 
-// --- JWT Authentication configuration ---
-
+// --------------------
+// JWT Authentication
+// --------------------
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"];
 var jwtIssuer = jwtSection["Issuer"];
@@ -74,8 +117,10 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
@@ -85,26 +130,33 @@ builder.Services
         {
             ValidateIssuer = true,
             ValidIssuer = jwtIssuer,
+
             ValidateAudience = true,
             ValidAudience = jwtAudience,
+
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = signingKey,
+
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(2)
         };
     });
 
+// --------------------
 // Token generator
+// --------------------
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// --- Repositories (MongoDB implementations) ---
-
+// --------------------
+// Repositories (Mongo)
+// --------------------
 builder.Services.AddScoped<IUserRepository, MongoUserRepository>();
 builder.Services.AddScoped<IPdfRepository, MongoPdfRepository>();
 builder.Services.AddScoped<IPurchaseRepository, MongoPurchaseRepository>();
 
-// --- Application Services ---
-
+// --------------------
+// Application services
+// --------------------
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
@@ -112,7 +164,9 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 
 var app = builder.Build();
 
-// Swagger only in dev
+// --------------------
+// Middleware pipeline
+// --------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -121,10 +175,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// --- Enable CORS BEFORE auth ---
+// CORS BEFORE auth
 app.UseCors("Frontend");
 
-// Authentication + Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
