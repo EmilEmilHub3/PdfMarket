@@ -25,13 +25,12 @@ public class MongoPdfRepository : IPdfRepository
     {
         var builder = Builders<PdfDocument>.Filter;
         var filters = new List<FilterDefinition<PdfDocument>>
-        {
-            builder.Eq(p => p.IsActive, true)
-        };
+    {
+        builder.Eq(p => p.IsActive, true)
+    };
 
         if (!string.IsNullOrWhiteSpace(filter.Query))
         {
-            // simpel tekstsøgning i title + description
             filters.Add(builder.Or(
                 builder.Regex(p => p.Title, filter.Query),
                 builder.Regex(p => p.Description, filter.Query)
@@ -55,9 +54,15 @@ public class MongoPdfRepository : IPdfRepository
 
         var combined = builder.And(filters);
 
-        var list = await pdfs.Find(combined).ToListAsync();
+        // ⭐ SORT HERE (newest → oldest)
+        var list = await pdfs
+            .Find(combined)
+            .SortByDescending(p => p.CreatedAt)
+            .ToListAsync();
+
         return list;
     }
+
 
     public async Task AddAsync(PdfDocument pdf)
     {
