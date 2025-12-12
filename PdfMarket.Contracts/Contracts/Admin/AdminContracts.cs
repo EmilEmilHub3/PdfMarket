@@ -33,3 +33,5 @@ public record UpdateUserRequest(
     string? Email,
     int? PointsBalance
 );
+
+public record ResetPasswordRequest(string NewPassword);

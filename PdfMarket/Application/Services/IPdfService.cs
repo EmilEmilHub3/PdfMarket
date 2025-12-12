@@ -16,9 +16,14 @@ public interface IPdfService
     /// Returns the PDF file for download, or null if it cannot be downloaded.
     /// </summary>
     Task<PdfFileResult?> GetFileForDownloadAsync(string userId, string pdfId);
+
+    Task<IReadOnlyCollection<PdfSummaryDto>> GetMyUploadsAsync(string userId);
+
 }
 
 /// <summary>
 /// Result object for a downloadable PDF file.
 /// </summary>
 public record PdfFileResult(Stream Stream, string FileName, string ContentType);
+
+

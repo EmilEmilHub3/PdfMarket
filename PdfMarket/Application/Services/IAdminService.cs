@@ -9,4 +9,6 @@ public interface IAdminService
 
     Task<IReadOnlyCollection<AdminPdfListItemDto>> GetPdfsAsync();
     Task<bool> DeletePdfAsync(string pdfId);
+
+    Task<bool> ResetUserPasswordAsync(string userId, string newPassword);
 }

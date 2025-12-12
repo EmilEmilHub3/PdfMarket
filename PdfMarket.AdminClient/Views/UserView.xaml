@@ -16,42 +16,99 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2">
-            <Button Content="Refresh" Width="100" Margin="0,0,8,0"
+        <!-- Top bar -->
+        <StackPanel Orientation="Horizontal"
+                    Grid.Row="0"
+                    Grid.ColumnSpan="2">
+            <Button Content="Refresh"
+                    Width="100"
+                    Margin="0,0,8,0"
                     Command="{Binding RefreshCommand}" />
-            <Button Content="Save changes" Width="120"
-                    Command="{Binding SaveCommand}" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" Margin="12,6,0,0"/>
+
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="Red"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"/>
         </StackPanel>
 
-        <DataGrid Grid.Row="1" Grid.Column="0"
+        <!-- Users list -->
+        <DataGrid Grid.Row="1"
+                  Grid.Column="0"
                   ItemsSource="{Binding Users}"
                   SelectedItem="{Binding SelectedUser}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   Margin="0,8,8,0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="UserName" Binding="{Binding UserName}" Width="*"/>
-                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
-                <DataGridTextColumn Header="Points" Binding="{Binding PointsBalance}" Width="Auto"/>
-                <DataGridTextColumn Header="Uploads" Binding="{Binding UploadCount}" Width="Auto"/>
-                <DataGridTextColumn Header="Buys" Binding="{Binding PurchaseCount}" Width="Auto"/>
-                <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="2*"/>
+                <DataGridTextColumn Header="UserName"
+                                    Binding="{Binding UserName}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Email"
+                                    Binding="{Binding Email}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Points"
+                                    Binding="{Binding PointsBalance}"
+                                    Width="Auto"/>
+                <DataGridTextColumn Header="Uploads"
+                                    Binding="{Binding UploadCount}"
+                                    Width="Auto"/>
+                <DataGridTextColumn Header="Buys"
+                                    Binding="{Binding PurchaseCount}"
+                                    Width="Auto"/>
+                <DataGridTextColumn Header="Id"
+                                    Binding="{Binding Id}"
+                                    Width="2*"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <Border Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" Padding="12" BorderThickness="1" BorderBrush="LightGray">
+        <!-- Edit panel -->
+        <Border Grid.Row="1"
+                Grid.Column="1"
+                Margin="0,8,0,0"
+                Padding="12"
+                BorderThickness="1"
+                BorderBrush="LightGray">
             <StackPanel>
-                <TextBlock Text="Edit selected user" FontWeight="Bold" Margin="0,0,0,8"/>
 
+                <TextBlock Text="Edit selected user"
+                           FontWeight="Bold"
+                           Margin="0,0,0,12"/>
+
+                <!-- Email -->
                 <TextBlock Text="Email"/>
-                <TextBox Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                <TextBox Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
 
+                <!-- Points -->
                 <TextBlock Text="Points"/>
-                <TextBox Text="{Binding EditPoints, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                <TextBox Text="{Binding EditPoints, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
 
-                <TextBlock Foreground="Gray" TextWrapping="Wrap"
-                           Text="Tip: Save will call PATCH /api/admin/users/{userId}."/>
+                <!-- Save changes moved here -->
+                <Button Content="Save changes"
+                        Width="140"
+                        Margin="0,0,0,12"
+                        Command="{Binding SaveCommand}" />
+
+                <Separator Margin="0,8"/>
+
+                <!-- Reset password -->
+                <TextBlock Text="Reset password"
+                           FontWeight="Bold"
+                           Margin="0,8,0,4"/>
+
+                <PasswordBox x:Name="NewPasswordBox"
+                             Margin="0,0,0,8"
+                             PasswordChanged="NewPasswordBox_OnPasswordChanged"/>
+
+                <Button Content="Reset password"
+                        Width="140"
+                        Command="{Binding ResetPasswordCommand}"/>
+
+                <TextBlock Foreground="Gray"
+                           TextWrapping="Wrap"
+                           Margin="0,12,0,0"
+                           Text="Save changes updates email/points. Reset password calls POST /api/admin/users/{userId}/reset-password."/>
             </StackPanel>
         </Border>
     </Grid>

@@ -106,4 +106,17 @@ public class PdfsController : ControllerBase
 
         return File(fileResult.Stream, fileResult.ContentType, fileResult.FileName);
     }
+
+    [HttpGet("my")]
+    [Authorize]
+    public async Task<IActionResult> GetMyUploads()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var result = await pdfService.GetMyUploadsAsync(userId);
+        return Ok(result);
+    }
+
 }

@@ -22,6 +22,7 @@ public class UsersViewModel : ViewModelBase
             OnPropertyChanged();
             LoadSelectedIntoEditor();
             SaveCommand.RaiseCanExecuteChanged();
+            ResetPasswordCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -39,6 +40,19 @@ public class UsersViewModel : ViewModelBase
         set { editPoints = value; OnPropertyChanged(); SaveCommand.RaiseCanExecuteChanged(); }
     }
 
+    // NEW: password reset input
+    private string? newPassword;
+    public string? NewPassword
+    {
+        get => newPassword;
+        set
+        {
+            newPassword = value;
+            OnPropertyChanged();
+            ResetPasswordCommand.RaiseCanExecuteChanged();
+        }
+    }
+
     private bool isBusy;
     public bool IsBusy
     {
@@ -49,6 +63,7 @@ public class UsersViewModel : ViewModelBase
             OnPropertyChanged();
             RefreshCommand.RaiseCanExecuteChanged();
             SaveCommand.RaiseCanExecuteChanged();
+            ResetPasswordCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -61,6 +76,7 @@ public class UsersViewModel : ViewModelBase
 
     public RelayCommand RefreshCommand { get; }
     public RelayCommand SaveCommand { get; }
+    public RelayCommand ResetPasswordCommand { get; }
 
     public UsersViewModel(AdminApiClient adminApi)
     {
@@ -73,6 +89,10 @@ public class UsersViewModel : ViewModelBase
         SaveCommand = new RelayCommand(
             async () => await SaveAsync(),
             () => CanSave());
+
+        ResetPasswordCommand = new RelayCommand(
+            async () => await ResetPasswordAsync(),
+            () => CanResetPassword());
     }
 
     public async Task LoadAsync()
@@ -103,11 +123,13 @@ public class UsersViewModel : ViewModelBase
         {
             EditEmail = null;
             EditPoints = null;
+            NewPassword = null;
             return;
         }
 
         EditEmail = SelectedUser.Email;
         EditPoints = SelectedUser.PointsBalance;
+        NewPassword = null;
     }
 
     private bool CanSave()
@@ -133,10 +155,68 @@ public class UsersViewModel : ViewModelBase
                 PointsBalance: EditPoints
             );
 
-            await adminApi.UpdateUserAsync(SelectedUser.Id, req);
+            var ok = await adminApi.UpdateUserAsync(SelectedUser.Id, req);
+            if (!ok)
+            {
+                ErrorMessage = "Update user failed.";
+                return;
+            }
 
             MessageBox.Show("User updated", "Success",
                 MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private bool CanResetPassword()
+    {
+        if (IsBusy || SelectedUser is null)
+            return false;
+
+        return !string.IsNullOrWhiteSpace(NewPassword);
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (SelectedUser is null || string.IsNullOrWhiteSpace(NewPassword))
+            return;
+
+        var confirm = MessageBox.Show(
+            $"Reset password for:\n\n{SelectedUser.UserName}\n\nContinue?",
+            "Confirm password reset",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+
+            var ok = await adminApi.ResetPasswordAsync(
+                SelectedUser.Id,
+                new ResetPasswordRequest(NewPassword));
+
+            if (!ok)
+            {
+                ErrorMessage = "Reset password failed.";
+                return;
+            }
+
+            MessageBox.Show("Password reset", "Success",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // clear after success
+            NewPassword = null;
         }
         catch (Exception ex)
         {

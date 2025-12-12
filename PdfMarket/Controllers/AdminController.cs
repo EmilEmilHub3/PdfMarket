@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PdfMarket.Application.Services;
+using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.Controllers;
 
@@ -45,5 +46,16 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
-}
+    // NEW: reset password
+    [HttpPost("users/{userId}/reset-password")]
+    public async Task<IActionResult> ResetPassword(string userId, [FromBody] ResetPasswordRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.NewPassword))
+            return BadRequest("NewPassword is required.");
 
+        var ok = await adminService.ResetUserPasswordAsync(userId, request.NewPassword);
+        if (!ok) return NotFound();
+
+        return NoContent();
+    }
+}

@@ -25,9 +25,9 @@ public class MongoPdfRepository : IPdfRepository
     {
         var builder = Builders<PdfDocument>.Filter;
         var filters = new List<FilterDefinition<PdfDocument>>
-    {
-        builder.Eq(p => p.IsActive, true)
-    };
+        {
+            builder.Eq(p => p.IsActive, true)
+        };
 
         if (!string.IsNullOrWhiteSpace(filter.Query))
         {
@@ -54,7 +54,6 @@ public class MongoPdfRepository : IPdfRepository
 
         var combined = builder.And(filters);
 
-        // ⭐ SORT HERE (newest → oldest)
         var list = await pdfs
             .Find(combined)
             .SortByDescending(p => p.CreatedAt)
@@ -63,6 +62,14 @@ public class MongoPdfRepository : IPdfRepository
         return list;
     }
 
+    // ✅ NEW: My uploads
+    public async Task<IReadOnlyCollection<PdfDocument>> GetByUploaderAsync(string uploaderUserId)
+    {
+        return await pdfs
+            .Find(p => p.UploaderUserId == uploaderUserId && p.IsActive)
+            .SortByDescending(p => p.CreatedAt)
+            .ToListAsync();
+    }
 
     public async Task AddAsync(PdfDocument pdf)
     {
@@ -89,5 +96,4 @@ public class MongoPdfRepository : IPdfRepository
     {
         await pdfs.DeleteOneAsync(p => p.Id == id);
     }
-
 }

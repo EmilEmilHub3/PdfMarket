@@ -105,4 +105,22 @@ public class AdminService : IAdminService
         await pdfRepository.DeleteAsync(pdfId);
         return true;
     }
+
+    // NEW: reset password (matches your current AuthService behavior)
+    public async Task<bool> ResetUserPasswordAsync(string userId, string newPassword)
+    {
+        var user = await userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(newPassword))
+            return false;
+
+        // Your AuthService currently compares PasswordHash to plaintext password.
+        // So keep this consistent for now.
+        user.PasswordHash = newPassword;
+
+        await userRepository.UpdateAsync(user);
+        return true;
+    }
 }

@@ -46,6 +46,25 @@ public class PdfService : IPdfService
         return list;
     }
 
+    // ✅ NEW
+    public async Task<IReadOnlyCollection<PdfSummaryDto>> GetMyUploadsAsync(string userId)
+    {
+        var pdfs = await pdfRepository.GetByUploaderAsync(userId);
+
+        var me = await userRepository.GetByIdAsync(userId);
+        var uploaderName = me?.UserName ?? "Unknown";
+
+        return pdfs
+            .Select(pdf => new PdfSummaryDto(
+                pdf.Id,
+                pdf.Title,
+                uploaderName,
+                pdf.PriceInPoints,
+                pdf.Tags
+            ))
+            .ToList();
+    }
+
     public async Task<PdfDetailsDto?> GetDetailsAsync(string id)
     {
         var pdf = await pdfRepository.GetByIdAsync(id);
@@ -74,13 +93,11 @@ public class PdfService : IPdfService
       Stream pdfStream,
       string fileName)
     {
-        // 1) Upload selve filen til storage via abstraction
         var storageId = await fileStorage.UploadAsync(
             pdfStream,
             fileName,
             "application/pdf");
 
-        // 2) Gem metadata via IPdfRepository
         var pdf = new PdfDocument
         {
             Title = request.Title,
@@ -93,18 +110,15 @@ public class PdfService : IPdfService
 
         await pdfRepository.AddAsync(pdf);
 
-        // 3) Giv upload-point til brugeren via IUserRepository
         var user = await userRepository.GetByIdAsync(userId)
                    ?? throw new InvalidOperationException("Uploader not found");
 
         user.PointsBalance += 1; // 1 point per upload
         await userRepository.UpdateAsync(user);
 
-        // 4) Hent detaljer om PDF (samme mapping som du allerede bruger)
         var details = await GetDetailsAsync(pdf.Id)
                       ?? throw new InvalidOperationException("Failed to load uploaded PDF");
 
-        // 5) Returnér både pdf + ny pointsBalance
         return new UploadPdfResponse(
             Pdf: details,
             UploaderPointsBalance: user.PointsBalance
@@ -139,10 +153,6 @@ public class PdfService : IPdfService
         return true;
     }
 
-    /// <summary>
-    /// Henter PDF-filen klar til download.
-    /// (Lige nu tjekker vi kun at den er aktiv og har en fil; senere kan du koble køb-check på.)
-    /// </summary>
     public async Task<PdfFileResult?> GetFileForDownloadAsync(string userId, string pdfId)
     {
         var pdf = await pdfRepository.GetByIdAsync(pdfId);
@@ -154,10 +164,6 @@ public class PdfService : IPdfService
 
         if (string.IsNullOrEmpty(pdf.FileStorageId))
             return null;
-
-        // TODO: Her kan du senere tilføje:
-        // - Har brugeren købt pdf'en?
-        // - Eller er user uploader/admin?
 
         var memoryStream = new MemoryStream();
         await fileStorage.DownloadAsync(pdf.FileStorageId, memoryStream);

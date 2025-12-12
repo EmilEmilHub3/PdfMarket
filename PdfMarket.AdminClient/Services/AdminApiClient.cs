@@ -42,9 +42,6 @@ public class AdminApiClient
                ?? new List<UserSummaryDto>();
     }
 
-    // -----------------------
-    // US11 - PDFs moderation
-    // -----------------------
     public async Task<IReadOnlyCollection<AdminPdfListItemDto>> GetPdfsAsync()
     {
         var response = await http.GetAsync("api/admin/pdfs");
@@ -62,22 +59,29 @@ public class AdminApiClient
         return response.IsSuccessStatusCode;
     }
 
-    // -----------------------
-    // US12 - Update user info
-    // -----------------------
     public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
     {
         var json = JsonSerializer.Serialize(request, JsonOptions);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // HttpClient har PatchAsync i nyere .NET. Hvis din ikke har:
-        // brug HttpRequestMessage-versionen herunder.
+        // If PatchAsync is not available in your target framework,
+        // use the HttpRequestMessage alternative below.
         var response = await http.PatchAsync($"api/admin/users/{userId}", content);
         return response.IsSuccessStatusCode;
     }
 
-    // Hvis din .NET ikke har PatchAsync, så erstat UpdateUserAsync med denne version:
+    // NEW: reset password endpoint
+    public async Task<bool> ResetPasswordAsync(string userId, ResetPasswordRequest request)
+    {
+        var json = JsonSerializer.Serialize(request, JsonOptions);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await http.PostAsync($"api/admin/users/{userId}/reset-password", content);
+        return response.IsSuccessStatusCode;
+    }
+
     /*
+    // If PatchAsync is missing, replace UpdateUserAsync with this:
     public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
     {
         var json = JsonSerializer.Serialize(request, JsonOptions);
