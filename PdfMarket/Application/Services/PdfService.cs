@@ -81,7 +81,7 @@ public class PdfService : IPdfService
             uploaderName,
             pdf.PriceInPoints,
             pdf.Tags,
-            uploadRewardPoints: 1,
+            1,
             pdf.CreatedAt,
             pdf.IsActive
         );
