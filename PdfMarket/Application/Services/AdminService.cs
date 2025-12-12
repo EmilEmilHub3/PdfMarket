@@ -1,5 +1,6 @@
-﻿using PdfMarket.Contracts.Admin;
-using PdfMarket.Application.Abstractions.Repositories;
+﻿using PdfMarket.Application.Abstractions.Repositories;
+using PdfMarket.Application.Abstractions.Storage;
+using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.Application.Services;
 
@@ -8,23 +9,27 @@ public class AdminService : IAdminService
     private readonly IUserRepository userRepository;
     private readonly IPdfRepository pdfRepository;
     private readonly IPurchaseRepository purchaseRepository;
+    private readonly IFileStorage fileStorage;
 
     public AdminService(
         IUserRepository userRepository,
         IPdfRepository pdfRepository,
-        IPurchaseRepository purchaseRepository)
+        IPurchaseRepository purchaseRepository,
+        IFileStorage fileStorage)
     {
         this.userRepository = userRepository;
         this.pdfRepository = pdfRepository;
         this.purchaseRepository = purchaseRepository;
+        this.fileStorage = fileStorage;
     }
 
     public async Task<IReadOnlyCollection<UserSummaryDto>> GetUsersAsync()
     {
         var users = await userRepository.GetAllAsync();
         var purchases = await purchaseRepository.GetAllAsync();
-        var allPdfs = await pdfRepository.BrowseAsync(
-            new PdfMarket.Contracts.Pdfs.PdfFilterRequest(null, null, null, null));
+
+        // Admin: count ALL PDFs (active + inactive)
+        var allPdfs = await pdfRepository.GetAllAsync();
 
         var summaries = users.Select(u =>
         {
@@ -35,7 +40,7 @@ public class AdminService : IAdminService
                 u.Id,
                 u.UserName,
                 u.Email,
-                IsBlocked: false,    // no block feature yet
+                IsBlocked: false, // no block feature yet
                 u.PointsBalance,
                 uploads,
                 buys
@@ -48,8 +53,10 @@ public class AdminService : IAdminService
     public async Task<PlatformStatsDto> GetStatsAsync()
     {
         var users = await userRepository.GetAllAsync();
-        var pdfs = await pdfRepository.BrowseAsync(
-            new PdfMarket.Contracts.Pdfs.PdfFilterRequest(null, null, null, null));
+
+        // Admin: total PDFs should be ALL (active + inactive)
+        var pdfs = await pdfRepository.GetAllAsync();
+
         var purchases = await purchaseRepository.GetAllAsync();
 
         var totalPoints = users.Sum(u => u.PointsBalance);
@@ -60,5 +67,42 @@ public class AdminService : IAdminService
             TotalPurchases: purchases.Count,
             TotalPointsInSystem: totalPoints
         );
+    }
+
+    public async Task<IReadOnlyCollection<AdminPdfListItemDto>> GetPdfsAsync()
+    {
+        var pdfs = await pdfRepository.GetAllAsync();
+        var users = await userRepository.GetAllAsync();
+
+        return pdfs.Select(p =>
+        {
+            var uploader = users.FirstOrDefault(u => u.Id == p.UploaderUserId);
+
+            return new AdminPdfListItemDto(
+                p.Id,
+                p.Title,
+                p.UploaderUserId,
+                uploader?.UserName ?? "Unknown",
+                p.PriceInPoints,
+                p.Tags,
+                p.CreatedAt,
+                p.IsActive
+            );
+        }).ToList();
+    }
+
+    public async Task<bool> DeletePdfAsync(string pdfId)
+    {
+        var pdf = await pdfRepository.GetByIdAsync(pdfId);
+        if (pdf is null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(pdf.FileStorageId))
+        {
+            await fileStorage.DeleteAsync(pdf.FileStorageId);
+        }
+
+        await pdfRepository.DeleteAsync(pdfId);
+        return true;
     }
 }

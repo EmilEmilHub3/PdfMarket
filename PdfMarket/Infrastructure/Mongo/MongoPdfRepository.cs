@@ -76,4 +76,18 @@ public class MongoPdfRepository : IPdfRepository
             replacement: pdf,
             options: new ReplaceOptions { IsUpsert = false });
     }
+
+    public async Task<IReadOnlyCollection<PdfDocument>> GetAllAsync()
+    {
+        return await pdfs
+            .Find(Builders<PdfDocument>.Filter.Empty)
+            .SortByDescending(p => p.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        await pdfs.DeleteOneAsync(p => p.Id == id);
+    }
+
 }

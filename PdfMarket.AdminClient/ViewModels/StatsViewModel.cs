@@ -2,7 +2,6 @@
 using PdfMarket.AdminClient.Services;
 using PdfMarket.Contracts.Admin;
 
-
 namespace PdfMarket.AdminClient.ViewModels;
 
 public class StatsViewModel : ViewModelBase
@@ -26,10 +25,9 @@ public class StatsViewModel : ViewModelBase
     public StatsViewModel(AdminApiClient adminApi)
     {
         statsLoader = new StatsLoader(adminApi);
-        _ = LoadAsync();
     }
 
-    private async Task LoadAsync()
+    public async Task LoadAsync()
     {
         Stats = await statsLoader.LoadStatsAsync(p => Progress = p);
     }

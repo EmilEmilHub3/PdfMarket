@@ -16,3 +16,20 @@ public record PlatformStatsDto(
     int TotalPurchases,
     int TotalPointsInSystem
 );
+
+public record AdminPdfListItemDto(
+    string Id,
+    string Title,
+    string UploaderUserId,
+    string UploaderUserName,
+    int PriceInPoints,
+    string[] Tags,
+    DateTime CreatedAt,
+    bool IsActive
+);
+
+
+public record UpdateUserRequest(
+    string? Email,
+    int? PointsBalance
+);

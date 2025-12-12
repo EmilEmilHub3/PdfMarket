@@ -29,4 +29,21 @@ public class AdminController : ControllerBase
         var stats = await adminService.GetStatsAsync();
         return Ok(stats);
     }
+
+    [HttpGet("pdfs")]
+    public async Task<IActionResult> GetPdfs()
+    {
+        var pdfs = await adminService.GetPdfsAsync();
+        return Ok(pdfs);
+    }
+
+    [HttpDelete("pdfs/{pdfId}")]
+    public async Task<IActionResult> DeletePdf(string pdfId)
+    {
+        var ok = await adminService.DeletePdfAsync(pdfId);
+        if (!ok) return NotFound();
+        return NoContent();
+    }
+
 }
+
