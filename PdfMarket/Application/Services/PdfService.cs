@@ -11,16 +11,21 @@ public class PdfService : IPdfService
     private readonly IPdfRepository pdfRepository;
     private readonly IUserRepository userRepository;
     private readonly IFileStorage fileStorage;
+    private readonly IPurchaseService purchaseService;
+
 
     public PdfService(
-        IPdfRepository pdfRepository,
-        IUserRepository userRepository,
-        IFileStorage fileStorage)
+    IPdfRepository pdfRepository,
+    IUserRepository userRepository,
+    IFileStorage fileStorage,
+    IPurchaseService purchaseService)
     {
         this.pdfRepository = pdfRepository;
         this.userRepository = userRepository;
         this.fileStorage = fileStorage;
+        this.purchaseService = purchaseService;
     }
+
 
     public async Task<IReadOnlyCollection<PdfSummaryDto>> BrowseAsync(PdfFilterRequest filter)
     {
@@ -165,6 +170,16 @@ public class PdfService : IPdfService
         if (string.IsNullOrEmpty(pdf.FileStorageId))
             return null;
 
+        // ✅ US9 rule: only uploader OR purchaser may download
+        var isUploader = pdf.UploaderUserId == userId;
+
+        if (!isUploader)
+        {
+            var hasPurchased = await purchaseService.HasUserPurchasedPdfAsync(userId, pdfId);
+            if (!hasPurchased)
+                return null;
+        }
+
         var memoryStream = new MemoryStream();
         await fileStorage.DownloadAsync(pdf.FileStorageId, memoryStream);
         memoryStream.Position = 0;
@@ -181,4 +196,5 @@ public class PdfService : IPdfService
             "application/pdf"
         );
     }
+
 }
