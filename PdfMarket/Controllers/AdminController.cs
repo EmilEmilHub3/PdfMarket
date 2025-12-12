@@ -5,6 +5,9 @@ using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.Controllers;
 
+/// <summary>
+/// Admin-only endpoints for moderation, user overview, and platform statistics.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
@@ -17,6 +20,9 @@ public class AdminController : ControllerBase
         this.adminService = adminService;
     }
 
+    /// <summary>
+    /// Returns an overview of all users (admin only).
+    /// </summary>
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers()
     {
@@ -24,6 +30,9 @@ public class AdminController : ControllerBase
         return Ok(users);
     }
 
+    /// <summary>
+    /// Returns platform-wide statistics (admin only).
+    /// </summary>
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
@@ -31,6 +40,9 @@ public class AdminController : ControllerBase
         return Ok(stats);
     }
 
+    /// <summary>
+    /// Returns a list of all PDFs (active and inactive) for moderation (admin only).
+    /// </summary>
     [HttpGet("pdfs")]
     public async Task<IActionResult> GetPdfs()
     {
@@ -38,23 +50,32 @@ public class AdminController : ControllerBase
         return Ok(pdfs);
     }
 
+    /// <summary>
+    /// Deletes a PDF and its stored file (admin only).
+    /// </summary>
     [HttpDelete("pdfs/{pdfId}")]
     public async Task<IActionResult> DeletePdf(string pdfId)
     {
         var ok = await adminService.DeletePdfAsync(pdfId);
-        if (!ok) return NotFound();
+        if (!ok)
+            return NotFound();
+
         return NoContent();
     }
 
-    // NEW: reset password
+    /// <summary>
+    /// Resets a user's password (admin only).
+    /// </summary>
     [HttpPost("users/{userId}/reset-password")]
     public async Task<IActionResult> ResetPassword(string userId, [FromBody] ResetPasswordRequest request)
     {
+        // Validate payload before calling the service.
         if (request is null || string.IsNullOrWhiteSpace(request.NewPassword))
             return BadRequest("NewPassword is required.");
 
         var ok = await adminService.ResetUserPasswordAsync(userId, request.NewPassword);
-        if (!ok) return NotFound();
+        if (!ok)
+            return NotFound();
 
         return NoContent();
     }

@@ -1,10 +1,16 @@
-﻿// src/Application/Services/PurchaseService.cs
+﻿using PdfMarket.Application.Abstractions.Repositories;
 using PdfMarket.Contracts.Purchases;
-using PdfMarket.Application.Abstractions.Repositories;
 using PdfMarket.Domain.Entities;
 
 namespace PdfMarket.Application.Services;
 
+/// <summary>
+/// Implements purchase business rules:
+/// - validates buyer and PDF
+/// - checks points
+/// - transfers points
+/// - records the purchase
+/// </summary>
 public class PurchaseService : IPurchaseService
 {
     private readonly IPdfRepository pdfRepository;
@@ -23,47 +29,43 @@ public class PurchaseService : IPurchaseService
 
     public async Task<PurchaseResponse?> PurchaseAsync(string buyerUserId, PurchaseRequest request)
     {
-        // 1) Find buyer
+        // Buyer must exist (prevents purchases with invalid JWT identities).
         var buyer = await userRepository.GetByIdAsync(buyerUserId);
         if (buyer is null)
             return null;
 
-        // 2) Find pdf
+        // PDF must exist and be active (inactive PDFs are not purchasable).
         var pdf = await pdfRepository.GetByIdAsync(request.PdfId);
         if (pdf is null || !pdf.IsActive)
             return null;
 
-        // 3) Find seller (uploader)
+        // Seller (uploader) must exist for points transfer.
         var seller = await userRepository.GetByIdAsync(pdf.UploaderUserId);
         if (seller is null)
             throw new InvalidOperationException("Uploader not found");
 
-        // 4) Check buyer has enough points
+        // Enforce the points economy rule.
         if (buyer.PointsBalance < pdf.PriceInPoints)
             throw new InvalidOperationException("Not enough points");
 
-        // 5) Move points: buyer -> seller
+        // Transfer points and record ownership (OwnedPdfIds is a fast check for UI use later).
         buyer.PointsBalance -= pdf.PriceInPoints;
         buyer.OwnedPdfIds.Add(pdf.Id);
 
-        // If buyer and seller are different users, credit seller
+        // Avoid double-credit if user buys their own PDF.
         if (seller.Id != buyer.Id)
         {
             seller.PointsBalance += pdf.PriceInPoints;
         }
-        // If they are the same user (buying own PDF), net effect is:
-        // - buyer loses points
-        // - no extra credit
-        // You can change this later if you want a different rule.
 
-        // 6) Persist users
+        // Persist updated balances.
         await userRepository.UpdateAsync(buyer);
         if (seller.Id != buyer.Id)
         {
             await userRepository.UpdateAsync(seller);
         }
 
-        // 7) Create purchase record
+        // Record the purchase as an immutable event-like entity.
         var purchase = new Purchase
         {
             BuyerUserId = buyer.Id,
@@ -73,7 +75,7 @@ public class PurchaseService : IPurchaseService
 
         await purchaseRepository.AddAsync(purchase);
 
-        // 8) Return response
+        // Return current balance so the frontend can update immediately.
         return new PurchaseResponse(
             purchase.Id,
             purchase.PdfId,
@@ -87,7 +89,6 @@ public class PurchaseService : IPurchaseService
     public async Task<IReadOnlyCollection<PurchasedPdfDto>> GetMyPurchasesAsync(string buyerUserId)
     {
         var purchases = await purchaseRepository.GetByBuyerAsync(buyerUserId);
-
         if (purchases.Count == 0)
             return Array.Empty<PurchasedPdfDto>();
 
@@ -95,6 +96,7 @@ public class PurchaseService : IPurchaseService
 
         foreach (var purchase in purchases)
         {
+            // Enrich the purchase with title (PDF may be missing if deleted by admin).
             var pdf = await pdfRepository.GetByIdAsync(purchase.PdfId);
             var title = pdf?.Title ?? "Unknown";
 
@@ -111,6 +113,7 @@ public class PurchaseService : IPurchaseService
 
     public async Task<bool> HasUserPurchasedPdfAsync(string buyerUserId, string pdfId)
     {
+        // Simple authorization check: does a purchase record exist for (buyer, pdf)?
         var purchases = await purchaseRepository.GetByBuyerAsync(buyerUserId);
         return purchases.Any(p => p.PdfId == pdfId);
     }

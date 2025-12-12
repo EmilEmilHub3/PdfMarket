@@ -13,9 +13,9 @@ using PdfMarket.Infrastructure.Mongo;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --------------------
-// CORS (React frontend)
-// --------------------
+// ============================================================
+// CORS configuration (React frontend)
+// ============================================================
 var frontendOrigin = "http://localhost:5173";
 
 builder.Services.AddCors(options =>
@@ -28,29 +28,30 @@ builder.Services.AddCors(options =>
     });
 });
 
-// --------------------
-// Controllers + JSON
-// --------------------
+// ============================================================
+// Controllers + JSON configuration
+// ============================================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
+        // Use camelCase to match JavaScript conventions
         o.JsonSerializerOptions.PropertyNamingPolicy =
             System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// --------------------
-// Swagger + JWT support
-// --------------------
+// ============================================================
+// Swagger (OpenAPI) + JWT support
+// ============================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "PdfMarket",
+        Title = "PdfMarket API",
         Version = "v1"
     });
 
-    // ?? JWT Bearer authentication for Swagger
+    // Enable JWT authentication inside Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -77,9 +78,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// --------------------
+// ============================================================
 // MongoDB configuration
-// --------------------
+// ============================================================
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 
@@ -96,14 +97,14 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
     return client.GetDatabase(settings.DatabaseName);
 });
 
-// --------------------
-// File storage (GridFS)
-// --------------------
+// ============================================================
+// File storage (MongoDB GridFS)
+// ============================================================
 builder.Services.AddSingleton<IFileStorage, GridFsFileStorage>();
 
-// --------------------
+// ============================================================
 // JWT Authentication
-// --------------------
+// ============================================================
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"];
 var jwtIssuer = jwtSection["Issuer"];
@@ -124,8 +125,9 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false; // dev mode
+        options.RequireHttpsMetadata = false; // Development setup
         options.SaveToken = true;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -142,21 +144,21 @@ builder.Services
         };
     });
 
-// --------------------
-// Token generator
-// --------------------
+// ============================================================
+// Token generation
+// ============================================================
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// --------------------
-// Repositories (Mongo)
-// --------------------
+// ============================================================
+// Repositories (MongoDB)
+// ============================================================
 builder.Services.AddScoped<IUserRepository, MongoUserRepository>();
 builder.Services.AddScoped<IPdfRepository, MongoPdfRepository>();
 builder.Services.AddScoped<IPurchaseRepository, MongoPurchaseRepository>();
 
-// --------------------
+// ============================================================
 // Application services
-// --------------------
+// ============================================================
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
@@ -164,9 +166,9 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 
 var app = builder.Build();
 
-// --------------------
+// ============================================================
 // Middleware pipeline
-// --------------------
+// ============================================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -175,7 +177,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// CORS BEFORE auth
+// CORS must run before authentication
 app.UseCors("Frontend");
 
 app.UseAuthentication();

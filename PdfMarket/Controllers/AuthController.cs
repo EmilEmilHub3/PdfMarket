@@ -5,6 +5,9 @@ using PdfMarket.Contracts.Auth;
 
 namespace PdfMarket.Controllers;
 
+/// <summary>
+/// Authentication endpoints for registering and logging in.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [AllowAnonymous]
@@ -17,6 +20,12 @@ public class AuthController : ControllerBase
         this.authService = authService;
     }
 
+    /// <summary>
+    /// Registers a new user and returns an auth response (including JWT).
+    /// </summary>
+    /// <remarks>
+    /// Returns 409 Conflict if the user already exists.
+    /// </remarks>
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -24,17 +33,25 @@ public class AuthController : ControllerBase
         try
         {
             var result = await authService.RegisterAsync(request);
+
+            // 201 Created is appropriate for new resources.
             return CreatedAtAction(nameof(Register), new { id = result.UserId }, result);
         }
         catch (InvalidOperationException ex) when (ex.Message == "User already exists")
         {
-            // 409 Conflict når brugeren allerede findes
+            // Conflict is the correct response for duplicate user registration.
             return Conflict(new { message = ex.Message });
         }
     }
 
-
+    /// <summary>
+    /// Logs in a user and returns an auth response (including JWT).
+    /// </summary>
+    /// <remarks>
+    /// Returns 401 Unauthorized if credentials are invalid.
+    /// </remarks>
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await authService.LoginAsync(request);

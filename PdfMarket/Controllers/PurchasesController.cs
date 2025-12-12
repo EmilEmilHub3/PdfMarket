@@ -1,5 +1,4 @@
-﻿// src/Controllers/PurchasesController.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PdfMarket.Application.Services;
@@ -7,6 +6,9 @@ using PdfMarket.Contracts.Purchases;
 
 namespace PdfMarket.Controllers;
 
+/// <summary>
+/// Endpoints for purchasing PDFs and viewing purchase history.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
@@ -19,6 +21,15 @@ public class PurchasesController : ControllerBase
         this.purchaseService = purchaseService;
     }
 
+    /// <summary>
+    /// Purchases a PDF for the current user.
+    /// </summary>
+    /// <remarks>
+    /// Returns:
+    /// - 401 if not authenticated
+    /// - 404 if the PDF does not exist or is inactive
+    /// - 400 if business rules fail (e.g., insufficient points)
+    /// </remarks>
     [HttpPost]
     public async Task<IActionResult> Purchase([FromBody] PurchaseRequest request)
     {
@@ -30,18 +41,20 @@ public class PurchasesController : ControllerBase
         {
             var result = await purchaseService.PurchaseAsync(userId, request);
             if (result is null)
-                return NotFound(); // e.g. pdf or user not found
+                return NotFound();
 
             return Ok(result);
         }
         catch (InvalidOperationException ex) when (ex.Message == "Not enough points")
         {
-            // pæn fejl i stedet for 500
+            // Returning 400 keeps failures explicit and avoids a generic 500.
             return BadRequest(new { message = ex.Message });
         }
     }
 
-    // NEW: GET /api/purchases/my
+    /// <summary>
+    /// Returns the current user's purchase history.
+    /// </summary>
     [HttpGet("my")]
     public async Task<IActionResult> GetMyPurchases()
     {

@@ -4,6 +4,9 @@ using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.Application.Services;
 
+/// <summary>
+/// Implements admin-only operations like user overview, moderation, and statistics.
+/// </summary>
 public class AdminService : IAdminService
 {
     private readonly IUserRepository userRepository;
@@ -25,14 +28,14 @@ public class AdminService : IAdminService
 
     public async Task<IReadOnlyCollection<UserSummaryDto>> GetUsersAsync()
     {
+        // Load data sets used for computed columns (uploads/purchases).
         var users = await userRepository.GetAllAsync();
         var purchases = await purchaseRepository.GetAllAsync();
+        var allPdfs = await pdfRepository.GetAllAsync(); // includes active + inactive
 
-        // Admin: count ALL PDFs (active + inactive)
-        var allPdfs = await pdfRepository.GetAllAsync();
-
-        var summaries = users.Select(u =>
+        return users.Select(u =>
         {
+            // Compute simple admin stats without extra DB roundtrips.
             var uploads = allPdfs.Count(p => p.UploaderUserId == u.Id);
             var buys = purchases.Count(p => p.BuyerUserId == u.Id);
 
@@ -40,25 +43,21 @@ public class AdminService : IAdminService
                 u.Id,
                 u.UserName,
                 u.Email,
-                IsBlocked: false, // no block feature yet
+                IsBlocked: false, // Project scope: blocking not implemented
                 u.PointsBalance,
                 uploads,
                 buys
             );
         }).ToList();
-
-        return summaries;
     }
 
     public async Task<PlatformStatsDto> GetStatsAsync()
     {
         var users = await userRepository.GetAllAsync();
-
-        // Admin: total PDFs should be ALL (active + inactive)
-        var pdfs = await pdfRepository.GetAllAsync();
-
+        var pdfs = await pdfRepository.GetAllAsync(); // includes active + inactive
         var purchases = await purchaseRepository.GetAllAsync();
 
+        // Useful “health metric” for the points economy.
         var totalPoints = users.Sum(u => u.PointsBalance);
 
         return new PlatformStatsDto(
@@ -71,6 +70,7 @@ public class AdminService : IAdminService
 
     public async Task<IReadOnlyCollection<AdminPdfListItemDto>> GetPdfsAsync()
     {
+        // Admin needs visibility across all uploads (active + inactive).
         var pdfs = await pdfRepository.GetAllAsync();
         var users = await userRepository.GetAllAsync();
 
@@ -97,6 +97,7 @@ public class AdminService : IAdminService
         if (pdf is null)
             return false;
 
+        // Delete the stored file first (best-effort), then delete metadata.
         if (!string.IsNullOrWhiteSpace(pdf.FileStorageId))
         {
             await fileStorage.DeleteAsync(pdf.FileStorageId);
@@ -106,7 +107,6 @@ public class AdminService : IAdminService
         return true;
     }
 
-    // NEW: reset password (matches your current AuthService behavior)
     public async Task<bool> ResetUserPasswordAsync(string userId, string newPassword)
     {
         var user = await userRepository.GetByIdAsync(userId);
@@ -116,8 +116,7 @@ public class AdminService : IAdminService
         if (string.IsNullOrWhiteSpace(newPassword))
             return false;
 
-        // Your AuthService currently compares PasswordHash to plaintext password.
-        // So keep this consistent for now.
+        // Project scope: passwords are stored/compared as-is (replace with hashing in production).
         user.PasswordHash = newPassword;
 
         await userRepository.UpdateAsync(user);

@@ -6,6 +6,10 @@ using PdfMarket.Domain.Entities;
 
 namespace PdfMarket.Application.Services;
 
+/// <summary>
+/// Application service responsible for PDF-related business logic.
+/// Handles browsing, uploading, managing visibility, and secure downloading of PDFs.
+/// </summary>
 public class PdfService : IPdfService
 {
     private readonly IPdfRepository pdfRepository;
@@ -13,12 +17,14 @@ public class PdfService : IPdfService
     private readonly IFileStorage fileStorage;
     private readonly IPurchaseService purchaseService;
 
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PdfService"/> class.
+    /// </summary>
     public PdfService(
-    IPdfRepository pdfRepository,
-    IUserRepository userRepository,
-    IFileStorage fileStorage,
-    IPurchaseService purchaseService)
+        IPdfRepository pdfRepository,
+        IUserRepository userRepository,
+        IFileStorage fileStorage,
+        IPurchaseService purchaseService)
     {
         this.pdfRepository = pdfRepository;
         this.userRepository = userRepository;
@@ -26,13 +32,20 @@ public class PdfService : IPdfService
         this.purchaseService = purchaseService;
     }
 
+    // ------------------------------------------------------------------
+    // Public browsing & read operations
+    // ------------------------------------------------------------------
 
+    /// <summary>
+    /// Returns a list of publicly visible PDFs matching the given filter.
+    /// Only active PDFs are included.
+    /// </summary>
     public async Task<IReadOnlyCollection<PdfSummaryDto>> BrowseAsync(PdfFilterRequest filter)
     {
         var pdfs = await pdfRepository.BrowseAsync(filter);
         var users = await userRepository.GetAllAsync();
 
-        var list = pdfs
+        return pdfs
             .Select(pdf =>
             {
                 var uploader = users.FirstOrDefault(u => u.Id == pdf.UploaderUserId);
@@ -47,29 +60,11 @@ public class PdfService : IPdfService
                 );
             })
             .ToList();
-
-        return list;
     }
 
-    // ✅ NEW
-    public async Task<IReadOnlyCollection<PdfSummaryDto>> GetMyUploadsAsync(string userId)
-    {
-        var pdfs = await pdfRepository.GetByUploaderAsync(userId);
-
-        var me = await userRepository.GetByIdAsync(userId);
-        var uploaderName = me?.UserName ?? "Unknown";
-
-        return pdfs
-            .Select(pdf => new PdfSummaryDto(
-                pdf.Id,
-                pdf.Title,
-                uploaderName,
-                pdf.PriceInPoints,
-                pdf.Tags
-            ))
-            .ToList();
-    }
-
+    /// <summary>
+    /// Returns detailed information about a specific PDF.
+    /// </summary>
     public async Task<PdfDetailsDto?> GetDetailsAsync(string id)
     {
         var pdf = await pdfRepository.GetByIdAsync(id);
@@ -86,17 +81,46 @@ public class PdfService : IPdfService
             uploaderName,
             pdf.PriceInPoints,
             pdf.Tags,
-            1, // fx 1 point per upload
+            uploadRewardPoints: 1,
             pdf.CreatedAt,
             pdf.IsActive
         );
     }
 
+    /// <summary>
+    /// Returns all PDFs uploaded by the given user, including inactive ones.
+    /// Used for managing own uploads.
+    /// </summary>
+    public async Task<IReadOnlyCollection<PdfSummaryDto>> GetMyUploadsAsync(string userId)
+    {
+        var pdfs = await pdfRepository.GetAllByUploaderAsync(userId);
+
+        var me = await userRepository.GetByIdAsync(userId);
+        var uploaderName = me?.UserName ?? "Unknown";
+
+        return pdfs
+            .Select(pdf => new PdfSummaryDto(
+                pdf.Id,
+                pdf.Title,
+                uploaderName,
+                pdf.PriceInPoints,
+                pdf.Tags
+            ))
+            .ToList();
+    }
+
+    // ------------------------------------------------------------------
+    // Upload & update operations
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Uploads a new PDF and rewards the uploader with points.
+    /// </summary>
     public async Task<UploadPdfResponse> UploadAsync(
-      string userId,
-      UploadPdfRequest request,
-      Stream pdfStream,
-      string fileName)
+        string userId,
+        UploadPdfRequest request,
+        Stream pdfStream,
+        string fileName)
     {
         var storageId = await fileStorage.UploadAsync(
             pdfStream,
@@ -118,7 +142,7 @@ public class PdfService : IPdfService
         var user = await userRepository.GetByIdAsync(userId)
                    ?? throw new InvalidOperationException("Uploader not found");
 
-        user.PointsBalance += 1; // 1 point per upload
+        user.PointsBalance += 1;
         await userRepository.UpdateAsync(user);
 
         var details = await GetDetailsAsync(pdf.Id)
@@ -130,6 +154,10 @@ public class PdfService : IPdfService
         );
     }
 
+    /// <summary>
+    /// Updates metadata and visibility of an existing PDF.
+    /// Only the uploader may perform this action.
+    /// </summary>
     public async Task<PdfDetailsDto?> UpdateAsync(string userId, string pdfId, UpdatePdfRequest request)
     {
         var pdf = await pdfRepository.GetByIdAsync(pdfId);
@@ -147,6 +175,9 @@ public class PdfService : IPdfService
         return await GetDetailsAsync(pdfId);
     }
 
+    /// <summary>
+    /// Deactivates a PDF so it is no longer visible in public browsing.
+    /// </summary>
     public async Task<bool> DeactivateAsync(string userId, string pdfId)
     {
         var pdf = await pdfRepository.GetByIdAsync(pdfId);
@@ -158,24 +189,27 @@ public class PdfService : IPdfService
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // Secure file access
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns a PDF file stream for download.
+    /// Only the uploader or a user who has purchased the PDF may download it.
+    /// </summary>
     public async Task<PdfFileResult?> GetFileForDownloadAsync(string userId, string pdfId)
     {
         var pdf = await pdfRepository.GetByIdAsync(pdfId);
-        if (pdf is null)
+        if (pdf is null || !pdf.IsActive || string.IsNullOrEmpty(pdf.FileStorageId))
             return null;
 
-        if (!pdf.IsActive)
-            return null;
-
-        if (string.IsNullOrEmpty(pdf.FileStorageId))
-            return null;
-
-        // ✅ US9 rule: only uploader OR purchaser may download
         var isUploader = pdf.UploaderUserId == userId;
 
         if (!isUploader)
         {
-            var hasPurchased = await purchaseService.HasUserPurchasedPdfAsync(userId, pdfId);
+            var hasPurchased =
+                await purchaseService.HasUserPurchasedPdfAsync(userId, pdfId);
+
             if (!hasPurchased)
                 return null;
         }
@@ -188,13 +222,10 @@ public class PdfService : IPdfService
             ? "document"
             : pdf.Title;
 
-        var fileName = $"{safeTitle}.pdf";
-
         return new PdfFileResult(
             memoryStream,
-            fileName,
+            $"{safeTitle}.pdf",
             "application/pdf"
         );
     }
-
 }
