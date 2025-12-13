@@ -9,7 +9,8 @@ public class MainViewModel : ViewModelBase
     public PdfModerationViewModel PdfModerationViewModel { get; }
     public UsersViewModel UsersViewModel { get; }
 
-    private ViewModelBase currentViewModel;
+    private ViewModelBase currentViewModel = null!;
+
     public ViewModelBase CurrentViewModel
     {
         get => currentViewModel;

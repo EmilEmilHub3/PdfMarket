@@ -7,7 +7,7 @@
 
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="2.2*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -17,59 +17,76 @@
         </Grid.RowDefinitions>
 
         <!-- Top bar -->
-        <StackPanel Orientation="Horizontal"
-                    Grid.Row="0"
-                    Grid.ColumnSpan="2">
+        <DockPanel Grid.Row="0"
+                   Grid.ColumnSpan="2"
+                   LastChildFill="True">
+
             <Button Content="Refresh"
                     Width="100"
                     Margin="0,0,8,0"
-                    Command="{Binding RefreshCommand}" />
+                    Command="{Binding RefreshCommand}"
+                    DockPanel.Dock="Left"/>
 
             <TextBlock Text="{Binding ErrorMessage}"
                        Foreground="Red"
                        VerticalAlignment="Center"
-                       Margin="12,0,0,0"/>
-        </StackPanel>
+                       TextWrapping="Wrap"/>
+        </DockPanel>
 
-        <!-- Users list -->
+        <!-- Users list (LEFT) -->
         <DataGrid Grid.Row="1"
                   Grid.Column="0"
+                  Margin="0,8,8,0"
                   ItemsSource="{Binding Users}"
                   SelectedItem="{Binding SelectedUser}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
-                  Margin="0,8,8,0">
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="UserName"
                                     Binding="{Binding UserName}"
-                                    Width="*"/>
+                                    Width="140"/>
+
                 <DataGridTextColumn Header="Email"
                                     Binding="{Binding Email}"
-                                    Width="*"/>
+                                    Width="2*"/>
+
                 <DataGridTextColumn Header="Points"
                                     Binding="{Binding PointsBalance}"
-                                    Width="Auto"/>
+                                    Width="90"/>
+
                 <DataGridTextColumn Header="Uploads"
-                                    Binding="{Binding UploadCount}"
-                                    Width="Auto"/>
+                                    Binding="{Binding TotalUploads}"
+                                    Width="80"/>
+
                 <DataGridTextColumn Header="Buys"
-                                    Binding="{Binding PurchaseCount}"
-                                    Width="Auto"/>
+                                    Binding="{Binding TotalPurchases}"
+                                    Width="70"/>
+
                 <DataGridTextColumn Header="Id"
                                     Binding="{Binding Id}"
-                                    Width="2*"/>
+                                    Width="260"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Edit panel -->
+        <!-- Edit panel (RIGHT) -->
         <Border Grid.Row="1"
                 Grid.Column="1"
                 Margin="0,8,0,0"
                 Padding="12"
                 BorderThickness="1"
-                BorderBrush="LightGray">
-            <StackPanel>
+                BorderBrush="LightGray"
+                VerticalAlignment="Top">
 
+            <StackPanel>
                 <TextBlock Text="Edit selected user"
                            FontWeight="Bold"
                            Margin="0,0,0,12"/>
@@ -84,15 +101,13 @@
                 <TextBox Text="{Binding EditPoints, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,0,0,8"/>
 
-                <!-- Save changes moved here -->
                 <Button Content="Save changes"
                         Width="140"
-                        Margin="0,0,0,12"
+                        Margin="0,4,0,12"
                         Command="{Binding SaveCommand}" />
 
                 <Separator Margin="0,8"/>
 
-                <!-- Reset password -->
                 <TextBlock Text="Reset password"
                            FontWeight="Bold"
                            Margin="0,8,0,4"/>
