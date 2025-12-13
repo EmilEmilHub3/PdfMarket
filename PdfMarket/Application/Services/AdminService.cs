@@ -122,4 +122,22 @@ public class AdminService : IAdminService
         await userRepository.UpdateAsync(user);
         return true;
     }
+
+    public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
+    {
+        var user = await userRepository.GetByIdAsync(userId);
+        if (user is null) return false;
+
+        // Kun opdater det der er sendt med
+        if (!string.IsNullOrWhiteSpace(request.Email))
+            user.Email = request.Email;
+
+        if (request.PointsBalance.HasValue)
+            user.PointsBalance = request.PointsBalance.Value;
+
+        await userRepository.UpdateAsync(user);
+        return true;
+    }
+
+
 }

@@ -1,4 +1,6 @@
-﻿namespace PdfMarket.Contracts.Admin;
+﻿using System.Text.Json.Serialization;
+
+namespace PdfMarket.Contracts.Admin;
 
 public record UserSummaryDto(
     string Id,

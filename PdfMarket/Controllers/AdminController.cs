@@ -79,4 +79,20 @@ public class AdminController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPut("users/{userId}")]
+    public async Task<IActionResult> UpdateUser(string userId, [FromBody] UpdateUserRequest request)
+    {
+        if (request is null)
+            return BadRequest("Request body is required.");
+
+        var ok = await adminService.UpdateUserAsync(userId, request);
+        if (!ok)
+            return NotFound();
+
+        return NoContent();
+    }
+
+
+
 }

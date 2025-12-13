@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -61,14 +62,19 @@ public class AdminApiClient
 
     public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
     {
-        var json = JsonSerializer.Serialize(request, JsonOptions);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await http.PutAsJsonAsync($"/api/admin/users/{userId}", request);
 
-        // If PatchAsync is not available in your target framework,
-        // use the HttpRequestMessage alternative below.
-        var response = await http.PatchAsync($"api/admin/users/{userId}", content);
-        return response.IsSuccessStatusCode;
+        if (response.IsSuccessStatusCode)
+            return true;
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        // Smid en exception med ALT det du har brug for
+        throw new HttpRequestException(
+            $"Update failed: {(int)response.StatusCode} {response.ReasonPhrase}\n{body}"
+        );
     }
+
 
     // NEW: reset password endpoint
     public async Task<bool> ResetPasswordAsync(string userId, ResetPasswordRequest request)

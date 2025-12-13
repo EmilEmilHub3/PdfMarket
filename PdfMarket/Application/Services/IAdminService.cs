@@ -31,4 +31,6 @@ public interface IAdminService
     /// Resets a user's password. Returns false if user not found or password invalid.
     /// </summary>
     Task<bool> ResetUserPasswordAsync(string userId, string newPassword);
+
+    Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request);
 }
