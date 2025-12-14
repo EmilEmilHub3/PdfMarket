@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Windows;
 using PdfMarket.AdminClient.Infrastructure;
 using PdfMarket.AdminClient.Services;
@@ -6,6 +7,9 @@ using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.AdminClient.ViewModels;
 
+/// <summary>
+/// ViewModel for administering users.
+/// </summary>
 public class UsersViewModel : ViewModelBase
 {
     private readonly AdminApiClient adminApi;
@@ -40,7 +44,6 @@ public class UsersViewModel : ViewModelBase
         set { editPoints = value; OnPropertyChanged(); SaveCommand.RaiseCanExecuteChanged(); }
     }
 
-    // NEW: password reset input
     private string? newPassword;
     public string? NewPassword
     {
@@ -82,17 +85,11 @@ public class UsersViewModel : ViewModelBase
     {
         this.adminApi = adminApi;
 
-        RefreshCommand = new RelayCommand(
-            async () => await LoadAsync(),
-            () => !IsBusy);
+        RefreshCommand = new RelayCommand(async () => await LoadAsync(), () => !IsBusy);
 
-        SaveCommand = new RelayCommand(
-            async () => await SaveAsync(),
-            () => CanSave());
+        SaveCommand = new RelayCommand(async () => await SaveAsync(), () => CanSave());
 
-        ResetPasswordCommand = new RelayCommand(
-            async () => await ResetPasswordAsync(),
-            () => CanResetPassword());
+        ResetPasswordCommand = new RelayCommand(async () => await ResetPasswordAsync(), () => CanResetPassword());
     }
 
     public async Task LoadAsync()
@@ -149,17 +146,28 @@ public class UsersViewModel : ViewModelBase
         try
         {
             IsBusy = true;
+            ErrorMessage = null;
 
             var req = new UpdateUserRequest(
                 Email: EditEmail,
                 PointsBalance: EditPoints
             );
 
-            var ok = await adminApi.UpdateUserAsync(SelectedUser.Id, req);
-            if (!ok)
+            // If UpdateUserAsync fails it should throw (your AdminApiClient version does that).
+            await adminApi.UpdateUserAsync(SelectedUser.Id, req);
+
+            // Update the list + selection so the UI reflects the changes immediately.
+            var index = Users.IndexOf(SelectedUser);
+            if (index >= 0)
             {
-                ErrorMessage = "Update user failed.";
-                return;
+                var updated = SelectedUser with
+                {
+                    Email = EditEmail ?? SelectedUser.Email,
+                    PointsBalance = EditPoints ?? SelectedUser.PointsBalance
+                };
+
+                Users[index] = updated;
+                SelectedUser = updated; // triggers editor refresh and disables Save
             }
 
             MessageBox.Show("User updated", "Success",
@@ -215,7 +223,6 @@ public class UsersViewModel : ViewModelBase
             MessageBox.Show("Password reset", "Success",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
-            // clear after success
             NewPassword = null;
         }
         catch (Exception ex)

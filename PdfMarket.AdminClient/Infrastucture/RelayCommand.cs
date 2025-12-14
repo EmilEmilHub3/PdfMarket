@@ -3,15 +3,18 @@ using System.Windows.Input;
 
 namespace PdfMarket.AdminClient.Infrastructure;
 
-// Simple ICommand implementation (MVVM)
-public class RelayCommand : ICommand
+/// <summary>
+/// Minimal <see cref="ICommand"/> implementation used for MVVM commands.
+/// Supports a parameterless execute action and optional can-execute predicate.
+/// </summary>
+public sealed class RelayCommand : ICommand
 {
     private readonly Action execute;
     private readonly Func<bool>? canExecute;
 
     public RelayCommand(Action execute, Func<bool>? canExecute = null)
     {
-        this.execute = execute;
+        this.execute = execute ?? throw new ArgumentNullException(nameof(execute));
         this.canExecute = canExecute;
     }
 
@@ -21,6 +24,9 @@ public class RelayCommand : ICommand
 
     public event EventHandler? CanExecuteChanged;
 
+    /// <summary>
+    /// Notifies WPF that the command availability may have changed.
+    /// </summary>
     public void RaiseCanExecuteChanged()
         => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }

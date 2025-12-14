@@ -6,6 +6,10 @@ using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.AdminClient.ViewModels;
 
+/// <summary>
+/// ViewModel for moderating uploaded PDFs.
+/// Allows admins to view and delete PDFs.
+/// </summary>
 public class PdfModerationViewModel : ViewModelBase
 {
     private readonly AdminApiClient adminApi;
@@ -60,6 +64,9 @@ public class PdfModerationViewModel : ViewModelBase
             () => !IsBusy && SelectedPdf != null);
     }
 
+    /// <summary>
+    /// Loads all PDFs from the admin API.
+    /// </summary>
     public async Task LoadAsync()
     {
         try
@@ -69,6 +76,7 @@ public class PdfModerationViewModel : ViewModelBase
 
             Pdfs.Clear();
             var items = await adminApi.GetPdfsAsync();
+
             foreach (var p in items)
                 Pdfs.Add(p);
         }
@@ -82,6 +90,9 @@ public class PdfModerationViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Deletes the currently selected PDF after confirmation.
+    /// </summary>
     private async Task DeleteSelectedAsync()
     {
         if (SelectedPdf is null)

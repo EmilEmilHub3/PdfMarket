@@ -4,6 +4,9 @@ using PdfMarket.Contracts.Admin;
 
 namespace PdfMarket.AdminClient.ViewModels;
 
+/// <summary>
+/// ViewModel for displaying platform statistics.
+/// </summary>
 public class StatsViewModel : ViewModelBase
 {
     private readonly StatsLoader statsLoader;
@@ -34,7 +37,9 @@ public class StatsViewModel : ViewModelBase
         statsLoader = new StatsLoader(adminApi);
     }
 
-    
+    /// <summary>
+    /// Loads statistics asynchronously and reports progress.
+    /// </summary>
     public async Task LoadAsync()
     {
         IsLoading = true;

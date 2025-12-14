@@ -3,6 +3,10 @@ using PdfMarket.AdminClient.Services;
 
 namespace PdfMarket.AdminClient.ViewModels;
 
+/// <summary>
+/// Root ViewModel that coordinates navigation between
+/// different admin sections (Stats, PDFs, Users).
+/// </summary>
 public class MainViewModel : ViewModelBase
 {
     public StatsViewModel StatsViewModel { get; }
@@ -10,7 +14,6 @@ public class MainViewModel : ViewModelBase
     public UsersViewModel UsersViewModel { get; }
 
     private ViewModelBase currentViewModel = null!;
-
     public ViewModelBase CurrentViewModel
     {
         get => currentViewModel;
@@ -51,6 +54,7 @@ public class MainViewModel : ViewModelBase
             await UsersViewModel.LoadAsync();
         });
 
+        // Initial load
         _ = StatsViewModel.LoadAsync();
     }
 }
