@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket", "PdfMarket\PdfMarket.csproj", "{828B8133-F88D-403D-98EB-52DF7ED0E952}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket.API", "PdfMarket\PdfMarket.API.csproj", "{828B8133-F88D-403D-98EB-52DF7ED0E952}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfMarket.AdminClient", "PdfMarket.AdminClient\PdfMarket.AdminClient.csproj", "{BC4EF388-E1F9-4360-81E5-D86A2020B6D0}"
 EndProject
