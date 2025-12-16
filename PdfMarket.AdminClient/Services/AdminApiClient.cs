@@ -10,18 +10,24 @@ namespace PdfMarket.AdminClient.Services;
 
 /// <summary>
 /// Thin HTTP client wrapper for admin endpoints in the PdfMarket Web API.
-/// 
-/// Purpose:
+///
+/// Responsibilities:
 /// - Centralizes all admin-related HTTP calls in one place.
-/// - Keeps ViewModels/UI free from raw HttpClient usage and serialization details.
+/// - Keeps ViewModels free from raw HttpClient usage and serialization details.
+/// - Provides consistent error handling so failures are visible (useful for exam/demo).
+///
+/// Notes:
+/// - The provided <see cref="HttpClient"/> is expected to be preconfigured with:
+///   - BaseAddress (e.g. http://localhost:8080/)
+///   - Authorization header (Bearer JWT) when calling protected admin endpoints.
 /// </summary>
 public class AdminApiClient
 {
     private readonly HttpClient http;
 
     /// <summary>
-    /// Shared JSON options for manual serialization/deserialization.
-    /// Case-insensitive helps when backend uses different casing than the client DTO properties.
+    /// Shared JSON options.
+    /// Case-insensitive helps when DTO casing differs from backend JSON casing.
     /// </summary>
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,24 +35,36 @@ public class AdminApiClient
     };
 
     /// <summary>
-    /// Creates a new <see cref="AdminApiClient"/> using an already-configured <see cref="HttpClient"/>.
-    /// The HttpClient is expected to have BaseAddress + Authorization header set by the caller/factory.
+    /// Creates a new <see cref="AdminApiClient"/> using a configured <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="http">Configured HTTP client (BaseAddress + optional Bearer token).</param>
+    /// <param name="http">
+    /// Configured HTTP client with BaseAddress and optional Authorization header.
+    /// </param>
     public AdminApiClient(HttpClient http)
     {
         this.http = http;
     }
 
     /// <summary>
-    /// Fetches platform statistics (total users, total pdfs, etc.) from the admin API.
+    /// Fetches platform statistics (total users, total PDFs, etc.) from the admin API.
     /// </summary>
-    /// <returns>A <see cref="PlatformStatsDto"/> if successful; otherwise <c>null</c>.</returns>
+    /// <returns>The stats DTO if successful.</returns>
+    /// <exception cref="HttpRequestException">
+    /// Thrown when the server responds with a non-success status code.
+    /// </exception>
     public async Task<PlatformStatsDto?> GetStatsAsync()
     {
+        // Relative URL -> resolved against HttpClient.BaseAddress
         var response = await http.GetAsync("api/admin/stats");
+
         if (!response.IsSuccessStatusCode)
-            return null;
+        {
+            // Read body to surface useful error details in the UI/logs
+            var body = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"GetStats failed: {(int)response.StatusCode} {response.ReasonPhrase}\n{body}"
+            );
+        }
 
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<PlatformStatsDto>(json, JsonOptions);
@@ -55,12 +73,21 @@ public class AdminApiClient
     /// <summary>
     /// Fetches a list of users for the admin UI.
     /// </summary>
-    /// <returns>A read-only collection of users. Returns an empty list on failure.</returns>
+    /// <returns>A read-only collection of users.</returns>
+    /// <exception cref="HttpRequestException">
+    /// Thrown when the server responds with a non-success status code.
+    /// </exception>
     public async Task<IReadOnlyCollection<UserSummaryDto>> GetUsersAsync()
     {
         var response = await http.GetAsync("api/admin/users");
+
         if (!response.IsSuccessStatusCode)
-            return new List<UserSummaryDto>();
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"GetUsers failed: {(int)response.StatusCode} {response.ReasonPhrase}\n{body}"
+            );
+        }
 
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<IReadOnlyCollection<UserSummaryDto>>(json, JsonOptions)
@@ -68,14 +95,23 @@ public class AdminApiClient
     }
 
     /// <summary>
-    /// Fetches a list of PDFs for the admin UI.
+    /// Fetches a list of PDFs for moderation in the admin UI.
     /// </summary>
-    /// <returns>A read-only collection of PDFs. Returns an empty list on failure.</returns>
+    /// <returns>A read-only collection of PDFs.</returns>
+    /// <exception cref="HttpRequestException">
+    /// Thrown when the server responds with a non-success status code.
+    /// </exception>
     public async Task<IReadOnlyCollection<AdminPdfListItemDto>> GetPdfsAsync()
     {
         var response = await http.GetAsync("api/admin/pdfs");
+
         if (!response.IsSuccessStatusCode)
-            return new List<AdminPdfListItemDto>();
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"GetPdfs failed: {(int)response.StatusCode} {response.ReasonPhrase}\n{body}"
+            );
+        }
 
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<IReadOnlyCollection<AdminPdfListItemDto>>(json, JsonOptions)
@@ -89,48 +125,34 @@ public class AdminApiClient
     /// <returns><c>true</c> if the server responded with success; otherwise <c>false</c>.</returns>
     public async Task<bool> DeletePdfAsync(string pdfId)
     {
+        // DELETE should not require a response body; status code is enough
         var response = await http.DeleteAsync($"api/admin/pdfs/{pdfId}");
         return response.IsSuccessStatusCode;
     }
 
     /// <summary>
     /// Updates a user's editable fields (e.g. email, points balance).
-    /// 
-    /// NOTE:
-    /// - Throws on non-success responses so the ViewModel can show a clear error message.
-    /// - The exception includes status code + response body to make debugging easy during exam/demo.
+    /// Null fields in <paramref name="request"/> mean "do not update that field".
     /// </summary>
     /// <param name="userId">User identifier.</param>
-    /// <param name="request">Update payload (nullable fields mean "only update what is set").</param>
+    /// <param name="request">Update payload.</param>
     /// <returns><c>true</c> if the request succeeded.</returns>
-    /// <exception cref="HttpRequestException">Thrown when the server returns a non-success status code.</exception>
+    /// <exception cref="HttpRequestException">
+    /// Thrown when the server responds with a non-success status code.
+    /// </exception>
     public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
     {
-        var response = await http.PutAsJsonAsync($"/api/admin/users/{userId}", request);
+        // Uses System.Net.Http.Json for JSON serialization of the request
+        var response = await http.PutAsJsonAsync($"api/admin/users/{userId}", request);
 
         if (response.IsSuccessStatusCode)
             return true;
 
         var body = await response.Content.ReadAsStringAsync();
-
         throw new HttpRequestException(
             $"Update failed: {(int)response.StatusCode} {response.ReasonPhrase}\n{body}"
         );
     }
 
     /// <summary>
-    /// Resets a user's password through the admin API.
-    /// </summary>
-    /// <param name="userId">User identifier.</param>
-    /// <param name="request">Contains the new password.</param>
-    /// <returns><c>true</c> if the server responded with success; otherwise <c>false</c>.</returns>
-    public async Task<bool> ResetPasswordAsync(string userId, ResetPasswordRequest request)
-    {
-        // Manual serialization is kept here to show explicit JSON handling 
-        var json = JsonSerializer.Serialize(request, JsonOptions);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var response = await http.PostAsync($"api/admin/users/{userId}/reset-password", content);
-        return response.IsSuccessStatusCode;
-    }
-}
+    /// Resets a user's password through the admin

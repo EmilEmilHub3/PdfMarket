@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   mongo:
     image: mongo:7
@@ -16,15 +14,16 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: PdfMarket/Dockerfile
     container_name: pdfmarket-api
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       ASPNETCORE_URLS: "http://+:8080"
-      Mongo__ConnectionString: "mongodb://root:example@mongo:27017"
-      Mongo__DatabaseName: "PdfMarketDb"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      MongoDb__ConnectionString: "mongodb://root:example@mongo:27017/?authSource=admin"
+      MongoDb__DatabaseName: "PdfMarketDb"
     depends_on:
       - mongo
 

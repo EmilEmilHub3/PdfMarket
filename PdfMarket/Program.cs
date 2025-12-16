@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -14,27 +14,28 @@ using PdfMarket.Infrastructure.Mongo;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// CORS configuration (React frontend)
+// CORS (React frontend)
 // ============================================================
-var frontendOrigin = "http://localhost:5173";
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins(frontendOrigin)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
 // ============================================================
-// Controllers + JSON configuration
+// Controllers + JSON
 // ============================================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
-        // Use camelCase to match JavaScript conventions
         o.JsonSerializerOptions.PropertyNamingPolicy =
             System.Text.Json.JsonNamingPolicy.CamelCase;
     });
@@ -51,15 +52,13 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // Enable JWT authentication inside Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter: Bearer {your JWT token}"
+        In = ParameterLocation.Header
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -79,7 +78,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ============================================================
-// MongoDB configuration
+// MongoDB
 // ============================================================
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
@@ -98,67 +97,54 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 });
 
 // ============================================================
-// File storage (MongoDB GridFS)
+// Storage + Seeder
 // ============================================================
 builder.Services.AddSingleton<IFileStorage, GridFsFileStorage>();
+builder.Services.AddSingleton<MongoSeeder>();
+builder.Services.AddHostedService<SeederHostedService>();
 
 // ============================================================
-// JWT Authentication
+// JWT
 // ============================================================
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"];
-var jwtIssuer = jwtSection["Issuer"];
-var jwtAudience = jwtSection["Audience"];
-
-if (string.IsNullOrWhiteSpace(jwtKey))
-    throw new InvalidOperationException("Jwt:Key missing in configuration");
-
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+var jwt = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwt["Key"]!);
 
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme =
-            JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme =
-            JwtBearerDefaults.AuthenticationScheme;
+        // ✅ Fixes: "No authenticationScheme was specified..."
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-    .AddJwtBearer(options =>
+    .AddJwtBearer(o =>
     {
-        options.RequireHttpsMetadata = false; // Development setup
-        options.SaveToken = true;
+        // Docker runs HTTP by default (no dev certs in container)
+        o.RequireHttpsMetadata = false;
 
-        options.TokenValidationParameters = new TokenValidationParameters
+        o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
+            ValidIssuer = jwt["Issuer"],
 
             ValidateAudience = true,
-            ValidAudience = jwtAudience,
+            ValidAudience = jwt["Audience"],
 
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = signingKey,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
 
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2)
+            ValidateLifetime = true
         };
     });
 
-// ============================================================
-// Token generation
-// ============================================================
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // ============================================================
-// Repositories (MongoDB)
+// Repositories + Services
 // ============================================================
 builder.Services.AddScoped<IUserRepository, MongoUserRepository>();
 builder.Services.AddScoped<IPdfRepository, MongoPdfRepository>();
 builder.Services.AddScoped<IPurchaseRepository, MongoPurchaseRepository>();
 
-// ============================================================
-// Application services
-// ============================================================
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
@@ -167,17 +153,23 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 var app = builder.Build();
 
 // ============================================================
-// Middleware pipeline
+// Pipeline
 // ============================================================
-if (app.Environment.IsDevelopment())
+var runningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase
+);
+
+if (!runningInContainer)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
-// CORS must run before authentication
+app.UseRouting();
 app.UseCors("Frontend");
 
 app.UseAuthentication();
