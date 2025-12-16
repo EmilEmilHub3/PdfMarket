@@ -36,7 +36,7 @@ public class MongoSeeder
             Email = "admin@pdfmarket.local",
             PasswordHash = "Admin123!", // scope: plain text i dit projekt (men hash i prod)
             Role = "Admin",
-            PointsBalance = 9999
+            PointsBalance = 999999
         };
 
         var user1 = new User
@@ -45,7 +45,7 @@ public class MongoSeeder
             Email = "alice@pdfmarket.local",
             PasswordHash = "Alice123!",
             Role = "User",
-            PointsBalance = 300
+            PointsBalance = 3000000
         };
 
         var user2 = new User
@@ -54,7 +54,7 @@ public class MongoSeeder
             Email = "bob@pdfmarket.local",
             PasswordHash = "Bob123!",
             Role = "User",
-            PointsBalance = 300
+            PointsBalance = 3000000
         };
 
         await users.InsertManyAsync([admin, user1, user2]);

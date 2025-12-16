@@ -156,3 +156,16 @@ public class AdminApiClient
 
     /// <summary>
     /// Resets a user's password through the admin
+    public async Task<bool> ResetPasswordAsync(string userId, ResetPasswordRequest request)
+    {
+        var json = JsonSerializer.Serialize(request, JsonOptions);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await http.PostAsync(
+            $"api/admin/users/{userId}/reset-password",
+            content
+        );
+
+        return response.IsSuccessStatusCode;
+    }
+}
