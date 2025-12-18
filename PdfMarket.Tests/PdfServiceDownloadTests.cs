@@ -8,8 +8,18 @@ using Xunit;
 
 namespace PdfMarket.Tests;
 
+/// <summary>
+/// Unit tests for PdfService.GetFileForDownloadAsync.
+/// The tests cover the main authorization and validation branches shown in the flow graph:
+/// - invalid PDF → return null
+/// - uploader access → allowed without purchase check
+/// - non-uploader access → allowed only if previously purchased
+/// </summary>
 public class PdfServiceDownloadTests
 {
+    /// <summary>
+    /// PDF not found → early return null.
+    /// </summary>
     [Fact]
     public async Task GetFileForDownloadAsync_ReturnsNull_WhenPdfNotFound()
     {
@@ -18,15 +28,84 @@ public class PdfServiceDownloadTests
         var storage = new Mock<IFileStorage>();
         var purchaseService = new Mock<IPurchaseService>();
 
-        pdfRepo.Setup(r => r.GetByIdAsync("pdf1")).ReturnsAsync((PdfDocument?)null);
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync((PdfDocument?)null);
 
         var sut = new PdfService(pdfRepo.Object, userRepo.Object, storage.Object, purchaseService.Object);
 
         var result = await sut.GetFileForDownloadAsync("u1", "pdf1");
 
         Assert.Null(result);
+        storage.Verify(s => s.DownloadAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
     }
 
+    /// <summary>
+    /// PDF exists but is inactive → early return null.
+    /// </summary>
+    [Fact]
+    public async Task GetFileForDownloadAsync_ReturnsNull_WhenPdfIsInactive()
+    {
+        var pdfRepo = new Mock<IPdfRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var storage = new Mock<IFileStorage>();
+        var purchaseService = new Mock<IPurchaseService>();
+
+        var pdf = new PdfDocument
+        {
+            Id = "pdf1",
+            UploaderUserId = "u1",
+            IsActive = false,
+            FileStorageId = "fs1",
+            Title = "MyPdf",
+            Description = "d"
+        };
+
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync(pdf);
+
+        var sut = new PdfService(pdfRepo.Object, userRepo.Object, storage.Object, purchaseService.Object);
+
+        var result = await sut.GetFileForDownloadAsync("u1", "pdf1");
+
+        Assert.Null(result);
+        storage.Verify(s => s.DownloadAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Missing FileStorageId → early return null.
+    /// </summary>
+    [Fact]
+    public async Task GetFileForDownloadAsync_ReturnsNull_WhenFileStorageIdMissing()
+    {
+        var pdfRepo = new Mock<IPdfRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var storage = new Mock<IFileStorage>();
+        var purchaseService = new Mock<IPurchaseService>();
+
+        var pdf = new PdfDocument
+        {
+            Id = "pdf1",
+            UploaderUserId = "u1",
+            IsActive = true,
+            FileStorageId = "",
+            Title = "MyPdf",
+            Description = "d"
+        };
+
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync(pdf);
+
+        var sut = new PdfService(pdfRepo.Object, userRepo.Object, storage.Object, purchaseService.Object);
+
+        var result = await sut.GetFileForDownloadAsync("u1", "pdf1");
+
+        Assert.Null(result);
+        storage.Verify(s => s.DownloadAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Uploader access → allowed without purchase check.
+    /// </summary>
     [Fact]
     public async Task GetFileForDownloadAsync_AllowsUploader_WithoutPurchaseCheck()
     {
@@ -45,7 +124,8 @@ public class PdfServiceDownloadTests
             Description = "d"
         };
 
-        pdfRepo.Setup(r => r.GetByIdAsync("pdf1")).ReturnsAsync(pdf);
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync(pdf);
 
         storage.Setup(s => s.DownloadAsync("fs1", It.IsAny<Stream>()))
             .Callback<string, Stream>((_, target) =>
@@ -66,6 +146,9 @@ public class PdfServiceDownloadTests
         storage.Verify(s => s.DownloadAsync("fs1", It.IsAny<Stream>()), Times.Once);
     }
 
+    /// <summary>
+    /// Non-uploader and not purchased → access denied → return null.
+    /// </summary>
     [Fact]
     public async Task GetFileForDownloadAsync_ReturnsNull_WhenNotUploader_AndNotPurchased()
     {
@@ -84,8 +167,11 @@ public class PdfServiceDownloadTests
             Description = "d"
         };
 
-        pdfRepo.Setup(r => r.GetByIdAsync("pdf1")).ReturnsAsync(pdf);
-        purchaseService.Setup(p => p.HasUserPurchasedPdfAsync("buyer", "pdf1")).ReturnsAsync(false);
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync(pdf);
+
+        purchaseService.Setup(p => p.HasUserPurchasedPdfAsync("buyer", "pdf1"))
+            .ReturnsAsync(false);
 
         var sut = new PdfService(pdfRepo.Object, userRepo.Object, storage.Object, purchaseService.Object);
 
@@ -96,6 +182,9 @@ public class PdfServiceDownloadTests
         storage.Verify(s => s.DownloadAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
     }
 
+    /// <summary>
+    /// Non-uploader but purchased → access granted → file is downloaded.
+    /// </summary>
     [Fact]
     public async Task GetFileForDownloadAsync_AllowsDownload_WhenPurchased()
     {
@@ -114,8 +203,11 @@ public class PdfServiceDownloadTests
             Description = "d"
         };
 
-        pdfRepo.Setup(r => r.GetByIdAsync("pdf1")).ReturnsAsync(pdf);
-        purchaseService.Setup(p => p.HasUserPurchasedPdfAsync("buyer", "pdf1")).ReturnsAsync(true);
+        pdfRepo.Setup(r => r.GetByIdAsync("pdf1"))
+            .ReturnsAsync(pdf);
+
+        purchaseService.Setup(p => p.HasUserPurchasedPdfAsync("buyer", "pdf1"))
+            .ReturnsAsync(true);
 
         storage.Setup(s => s.DownloadAsync("fs1", It.IsAny<Stream>()))
             .Callback<string, Stream>((_, target) =>
