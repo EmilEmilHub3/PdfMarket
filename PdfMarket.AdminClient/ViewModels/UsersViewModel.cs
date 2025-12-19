@@ -81,17 +81,22 @@ public class UsersViewModel : ViewModelBase
     public RelayCommand SaveCommand { get; }
     public RelayCommand ResetPasswordCommand { get; }
 
+    /// <summary>
+    /// Initializes the user administration ViewModel.
+    /// </summary>
+    /// <param name="adminApi">Authenticated admin API client.</param>
     public UsersViewModel(AdminApiClient adminApi)
     {
         this.adminApi = adminApi;
 
         RefreshCommand = new RelayCommand(async () => await LoadAsync(), () => !IsBusy);
-
         SaveCommand = new RelayCommand(async () => await SaveAsync(), () => CanSave());
-
         ResetPasswordCommand = new RelayCommand(async () => await ResetPasswordAsync(), () => CanResetPassword());
     }
 
+    /// <summary>
+    /// Loads all users from the admin API.
+    /// </summary>
     public async Task LoadAsync()
     {
         try
@@ -114,6 +119,9 @@ public class UsersViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Copies selected user data into the edit fields.
+    /// </summary>
     private void LoadSelectedIntoEditor()
     {
         if (SelectedUser is null)
@@ -129,6 +137,9 @@ public class UsersViewModel : ViewModelBase
         NewPassword = null;
     }
 
+    /// <summary>
+    /// Determines whether the selected user can be saved.
+    /// </summary>
     private bool CanSave()
     {
         if (IsBusy || SelectedUser is null)
@@ -138,6 +149,9 @@ public class UsersViewModel : ViewModelBase
                EditPoints != SelectedUser.PointsBalance;
     }
 
+    /// <summary>
+    /// Saves edited user data to the backend.
+    /// </summary>
     private async Task SaveAsync()
     {
         if (SelectedUser is null)
@@ -153,10 +167,8 @@ public class UsersViewModel : ViewModelBase
                 PointsBalance: EditPoints
             );
 
-            // If UpdateUserAsync fails it should throw (your AdminApiClient version does that).
             await adminApi.UpdateUserAsync(SelectedUser.Id, req);
 
-            // Update the list + selection so the UI reflects the changes immediately.
             var index = Users.IndexOf(SelectedUser);
             if (index >= 0)
             {
@@ -167,7 +179,7 @@ public class UsersViewModel : ViewModelBase
                 };
 
                 Users[index] = updated;
-                SelectedUser = updated; // triggers editor refresh and disables Save
+                SelectedUser = updated;
             }
 
             MessageBox.Show("User updated", "Success",
@@ -183,6 +195,9 @@ public class UsersViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Determines whether the password can be reset.
+    /// </summary>
     private bool CanResetPassword()
     {
         if (IsBusy || SelectedUser is null)
@@ -191,6 +206,9 @@ public class UsersViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(NewPassword);
     }
 
+    /// <summary>
+    /// Resets the password of the selected user after confirmation.
+    /// </summary>
     private async Task ResetPasswordAsync()
     {
         if (SelectedUser is null || string.IsNullOrWhiteSpace(NewPassword))
@@ -234,4 +252,5 @@ public class UsersViewModel : ViewModelBase
             IsBusy = false;
         }
     }
+
 }

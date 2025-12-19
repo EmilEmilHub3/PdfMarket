@@ -6,19 +6,26 @@ namespace PdfMarket.AdminClient.Views;
 
 /// <summary>
 /// View for managing users in the admin client.
-/// 
-/// Contains minimal code-behind to handle PasswordBox input,
-/// which cannot be bound directly in WPF.
+///
+/// Contains minimal code-behind logic required for handling
+/// PasswordBox input, which cannot be bound directly in WPF.
 /// </summary>
 public partial class UsersView : UserControl
 {
+    /// <summary>
+    /// Initializes the users management view.
+    /// </summary>
     public UsersView()
     {
         InitializeComponent();
     }
 
     /// <summary>
-    /// Transfers password input from PasswordBox to the ViewModel.
+    /// Transfers the entered password from the PasswordBox
+    /// to the UsersViewModel.
+    ///
+    /// This approach is required because WPF does not allow
+    /// direct binding to the PasswordBox.Password property.
     /// </summary>
     private void NewPasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
     {

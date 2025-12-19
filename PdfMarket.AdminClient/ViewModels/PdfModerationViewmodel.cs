@@ -51,6 +51,10 @@ public class PdfModerationViewModel : ViewModelBase
     public RelayCommand RefreshCommand { get; }
     public RelayCommand DeleteSelectedCommand { get; }
 
+    /// <summary>
+    /// Initializes the PDF moderation ViewModel.
+    /// </summary>
+    /// <param name="adminApi">Authenticated admin API client.</param>
     public PdfModerationViewModel(AdminApiClient adminApi)
     {
         this.adminApi = adminApi;
@@ -65,7 +69,7 @@ public class PdfModerationViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Loads all PDFs from the admin API.
+    /// Loads all PDFs available for moderation from the API.
     /// </summary>
     public async Task LoadAsync()
     {
@@ -91,7 +95,7 @@ public class PdfModerationViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Deletes the currently selected PDF after confirmation.
+    /// Deletes the currently selected PDF after user confirmation.
     /// </summary>
     private async Task DeleteSelectedAsync()
     {
@@ -124,4 +128,5 @@ public class PdfModerationViewModel : ViewModelBase
             IsBusy = false;
         }
     }
+
 }

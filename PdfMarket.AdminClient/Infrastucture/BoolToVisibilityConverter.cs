@@ -6,7 +6,7 @@ using System.Windows.Data;
 namespace PdfMarket.AdminClient.Infrastructure;
 
 /// <summary>
-/// Converts a boolean value to <see cref="Visibility"/> for WPF bindings.
+/// Converts a boolean value to Visibility.
 /// True => Visible, False => Collapsed.
 /// </summary>
 public sealed class BoolToVisibilityConverter : IValueConverter

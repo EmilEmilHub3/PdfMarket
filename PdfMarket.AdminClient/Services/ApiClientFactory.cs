@@ -5,20 +5,21 @@ using System.Net.Http.Headers;
 namespace PdfMarket.AdminClient.Services;
 
 /// <summary>
-/// Factory for creating configured <see cref="HttpClient"/> instances for the AdminClient.
-///
-/// Centralizes:
-/// - API base address handling
-/// - JWT Authorization header setup
+/// Factory responsible for creating configured HttpClient instances.
+/// Centralizes base URL handling and JWT authentication setup.
 /// </summary>
 public static class ApiClientFactory
 {
+    /// <summary>
+    /// Creates a configured HttpClient instance.
+    /// </summary>
+    /// <param name="baseUrl">Base URL of the API.</param>
+    /// <param name="token">Optional JWT token.</param>
     public static HttpClient Create(string baseUrl, string? token)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
             throw new ArgumentException("BaseUrl must be provided", nameof(baseUrl));
 
-        // Ensure trailing slash so relative URLs work correctly
         if (!baseUrl.EndsWith("/"))
             baseUrl += "/";
 

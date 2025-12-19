@@ -28,6 +28,10 @@ public class MainViewModel : ViewModelBase
     public RelayCommand ShowPdfsCommand { get; }
     public RelayCommand ShowUsersCommand { get; }
 
+    /// <summary>
+    /// Initializes the MainViewModel and all child ViewModels.
+    /// </summary>
+    /// <param name="adminApi">Authenticated admin API client.</param>
     public MainViewModel(AdminApiClient adminApi)
     {
         StatsViewModel = new StatsViewModel(adminApi);
@@ -54,7 +58,8 @@ public class MainViewModel : ViewModelBase
             await UsersViewModel.LoadAsync();
         });
 
-        // Initial load
+        // Initial data load
         _ = StatsViewModel.LoadAsync();
     }
+
 }

@@ -32,13 +32,18 @@ public class StatsViewModel : ViewModelBase
         private set { isLoading = value; OnPropertyChanged(); }
     }
 
+    /// <summary>
+    /// Initializes the statistics ViewModel.
+    /// </summary>
+    /// <param name="adminApi">Authenticated admin API client.</param>
     public StatsViewModel(AdminApiClient adminApi)
     {
         statsLoader = new StatsLoader(adminApi);
     }
 
     /// <summary>
-    /// Loads statistics asynchronously and reports progress.
+    /// Loads platform statistics asynchronously.
+    /// Reports progress to the UI via a callback.
     /// </summary>
     public async Task LoadAsync()
     {
@@ -52,4 +57,5 @@ public class StatsViewModel : ViewModelBase
             IsLoading = false;
         }
     }
+
 }

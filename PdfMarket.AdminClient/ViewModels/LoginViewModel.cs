@@ -50,6 +50,14 @@ public class LoginViewModel : ViewModelBase
 
     public RelayCommand LoginCommand { get; }
 
+    /// <summary>
+    /// Initializes the LoginViewModel.
+    /// </summary>
+    /// <param name="baseUrl">Base URL of the backend API.</param>
+    /// <param name="onLoginSuccess">
+    /// Callback executed when login succeeds.
+    /// Receives an authenticated HttpClient.
+    /// </param>
     public LoginViewModel(string baseUrl, Action<HttpClient> onLoginSuccess)
     {
         this.baseUrl = baseUrl;
@@ -58,6 +66,11 @@ public class LoginViewModel : ViewModelBase
         LoginCommand = new RelayCommand(async () => await LoginAsync(), () => !IsBusy);
     }
 
+    /// <summary>
+    /// Performs admin login against the API.
+    /// Validates credentials, checks admin role,
+    /// and initializes an authenticated HttpClient.
+    /// </summary>
     private async Task LoginAsync()
     {
         IsBusy = true;
@@ -73,7 +86,8 @@ public class LoginViewModel : ViewModelBase
             if (auth is null || auth.Role != "Admin")
             {
                 ErrorMessage = "Login failed or user is not an admin.";
-                MessageBox.Show(ErrorMessage, "Login failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ErrorMessage, "Login failed",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -82,13 +96,14 @@ public class LoginViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            // Keep UI-friendly feedback; detailed info can still be read from ex.Message.
             ErrorMessage = ex.Message;
-            MessageBox.Show($"Login error:\n\n{ex.Message}", "Login error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Login error:\n\n{ex.Message}",
+                "Login error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
 }
