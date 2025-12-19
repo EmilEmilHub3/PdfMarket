@@ -34,7 +34,7 @@ PDF Market er opdelt i tre tiers:
   *(ligger i separat repository)*
 
 ### Tier 2 – Backend
-- **.NET 8 Minimal API**
+- **.NET 8 API**
 - RESTful endpoints
 - JWT-baseret autentifikation og autorisation
 - Clean Architecture-opbygning
